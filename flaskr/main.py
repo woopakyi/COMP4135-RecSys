@@ -3,10 +3,6 @@ from flask import (
 )
 
 from .tools.data_tool import *
-
-from surprise import Reader
-from surprise import KNNBasic, KNNWithMeans
-from surprise import Dataset
 from sklearn.metrics.pairwise import cosine_similarity
 
 bp = Blueprint('main', __name__, url_prefix='/')
@@ -92,31 +88,18 @@ def getMoviesByGenres(user_genres):
 def getRecommendationBy(user_rates):
     results = []
     if len(user_rates) > 0:
-        # Initialize a reader with rating scale from 1 to 5
-        reader = Reader(rating_scale=(1, 5))
-        # Define the algorithm
-        algo = KNNWithMeans(sim_options={'name': 'pearson', 'user_based': True})
-        # Convert the user's ratings (stored in "user_rates") to the Dataset format
-        user_rates = ratesFromUser(user_rates)
-        # Add the user’s rating information into the Movielens dataset
-        training_rates = pd.concat([rates, user_rates], ignore_index=True)
-        # Load the combined data as a training dataset 
-        training_data = Dataset.load_from_df(training_rates, reader=reader)
-        # Build a full training set from the dataset
-        trainset = training_data.build_full_trainset()
-        # Fit the algorithm using the trainset
-        algo.fit(trainset)
-        all_movie_ids = movies['movieId'].unique()
-        # Predict ratings for all movies for the specified user (assuming user ID 611)
-        user_id = 611 
-        rated_movie_ids = user_rates[user_rates['userId'] == user_id]['movieId'].tolist()
-        predictions = [algo.predict(user_id, movie_id) for movie_id in all_movie_ids if movie_id not in rated_movie_ids]
-        top_predictions = [pred for pred in predictions]
-        # sort predicted ratings in a descending order
-        top_predictions.sort(key=lambda x: x.est, reverse=True)
-        # Select the top-K items (e.g., 12)
-        top_movie_ids = [pred.iid for pred in top_predictions[:12]]
-        results = movies[movies['movieId'].isin(top_movie_ids)]
+        user_rates_df = ratesFromUser(user_rates)
+        rated_movie_ids = user_rates_df['movieId'].tolist()
+
+        item_rep_matrix, item_rep_vector, feature_list = item_representation_based_movie_genres(movies)
+        user_profile = build_weighted_user_profile(user_rates_df, item_rep_vector, feature_list)
+        results = generate_recommendation_results(user_profile, item_rep_matrix, item_rep_vector, 40)
+        results = results[~results['movieId'].isin(rated_movie_ids)].head(12)
+
+        if len(results) == 0:
+            popularity = rates.groupby('movieId')['rating'].mean().sort_values(ascending=False)
+            top_movie_ids = [movie_id for movie_id in popularity.index.tolist() if movie_id not in rated_movie_ids][:12]
+            results = movies[movies['movieId'].isin(top_movie_ids)]
 
 
     # Return the result
@@ -166,6 +149,22 @@ def build_user_profile(movieIds, item_rep_vector, feature_list, weighted=True, n
     if normalized:
         user_profile = user_profile / sum(user_profile.values)
         
+    return user_profile
+
+
+def build_weighted_user_profile(user_rates_df, item_rep_vector, feature_list):
+    user_movie_rating_df = item_rep_vector[item_rep_vector['movieId'].isin(user_rates_df['movieId'])]
+    if len(user_movie_rating_df) == 0:
+        return build_user_profile([], item_rep_vector, feature_list)
+
+    merged = user_movie_rating_df.merge(user_rates_df[['movieId', 'rating']], on='movieId', how='inner')
+    weighted_profile = merged[feature_list].mul(merged['rating'], axis=0).sum()
+
+    if weighted_profile.sum() == 0:
+        return build_user_profile(user_rates_df['movieId'].tolist(), item_rep_vector, feature_list)
+
+    user_profile = weighted_profile.T
+    user_profile = user_profile / sum(user_profile.values)
     return user_profile
 # Step 3: Predicting user preference for items
 def generate_recommendation_results(user_profile,item_rep_matrix, movies_data, k=12):
