@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["gcc", "gfortran"]
+
+[phases.install]
+cmds = [
+  "python -m pip install --upgrade pip setuptools wheel",
+  "pip install -r requirements.txt"
+]
+
+[start]
+cmd = "gunicorn \"flaskr:create_app()\" --bind 0.0.0.0:$PORT --workers 1 --timeout 120"
