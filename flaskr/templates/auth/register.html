@@ -1,73 +1,100 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-shell">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+<div id="auth-register-app" class="auth-wrap">
+  <div class="auth-backdrop-shape"></div>
   <div class="card auth-card">
-    <h1 class="title is-3" style="text-align: center; margin-bottom: 2rem;">Create Account</h1>
-    
+    <h1 class="title is-3 has-text-centered mb-2">Create Account</h1>
+    <p class="has-text-grey has-text-centered mb-5">Join and personalize recommendations</p>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="notification is-{{ 'danger' if category == 'error' else 'success' }}" style="margin-bottom: 1rem;">
-            <button class="delete"></button>
+          <div class="notification is-{{ 'danger' if category == 'error' else 'success' }} is-light" style="margin-bottom: 1rem;">
             {{ message }}
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
-    
-    <form method="post">
+
+    <form method="post" @submit="onSubmit">
       <div class="field">
         <label class="label">Username</label>
-        <div class="control">
-          <input class="input" type="text" name="username" placeholder="Choose a username (3+ chars)" required>
+        <div class="control has-icons-left">
+          <input
+            class="input"
+            type="text"
+            name="username"
+            v-model.trim="username"
+            placeholder="Choose a username"
+            required
+          >
+          <span class="icon is-small is-left"><i class="fa fa-user"></i></span>
         </div>
       </div>
 
       <div class="field">
         <label class="label">Email</label>
-        <div class="control">
-          <input class="input" type="email" name="email" placeholder="Enter your email" required>
+        <div class="control has-icons-left">
+          <input
+            class="input"
+            type="email"
+            name="email"
+            v-model.trim="email"
+            placeholder="you@example.com"
+            required
+          >
+          <span class="icon is-small is-left"><i class="fa fa-envelope"></i></span>
         </div>
       </div>
 
       <div class="field">
         <label class="label">Password</label>
-        <div class="control">
-          <input class="input" type="password" name="password" placeholder="Minimum 6 characters" required>
+        <div class="control has-icons-left">
+          <input
+            class="input"
+            type="password"
+            name="password"
+            v-model="password"
+            placeholder="Minimum 6 characters"
+            required
+          >
+          <span class="icon is-small is-left"><i class="fa fa-lock"></i></span>
         </div>
       </div>
 
       <div class="field">
         <label class="label">Confirm Password</label>
-        <div class="control">
-          <input class="input" type="password" name="confirm_password" placeholder="Re-enter password" required>
+        <div class="control has-icons-left">
+          <input
+            class="input"
+            type="password"
+            name="confirm_password"
+            v-model="confirmPassword"
+            placeholder="Re-enter password"
+            required
+          >
+          <span class="icon is-small is-left"><i class="fa fa-lock"></i></span>
         </div>
       </div>
 
-      <div class="field is-grouped" style="justify-content: center; gap: 1rem;">
+      <progress class="progress is-primary" :value="passwordStrength" max="100">[[ passwordStrength ]]%</progress>
+      <p class="help">Password strength: [[ strengthLabel ]]</p>
+      <p class="help is-danger" v-if="errorMessage">[[ errorMessage ]]</p>
+
+      <div class="field mt-5">
         <div class="control">
-          <button class="button is-success" type="submit">Create Account</button>
+          <button class="button is-success is-fullwidth" type="submit">Create Account</button>
         </div>
-        <div class="control">
-          <a class="button is-light" href="{{ url_for('auth.login') }}">Already have an account?</a>
-        </div>
+      </div>
+
+      <div class="has-text-centered mt-3">
+        <a href="{{ url_for('auth.login') }}">Already have an account?</a>
       </div>
     </form>
   </div>
 </div>
 
-<style>
-  .auth-card {
-    max-width: 400px;
-    margin: 3rem auto;
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  .notification .delete {
-    cursor: pointer;
-  }
-</style>
+<script type="module" src="{{ url_for('static', filename='js/auth-register.js') }}"></script>
 {% endblock %}

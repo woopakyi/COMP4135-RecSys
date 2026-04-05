@@ -112,6 +112,17 @@ def debug_database():
             'votes': safe_count(Vote),
         }
     })
+    
+@bp.route('/debug/migrate-db', methods=('GET',))
+def migrate_database():
+    """Recreate database schema - USE WITH CAUTION"""
+    from .models import db
+    try:
+        db.drop_all()
+        db.create_all()
+        return jsonify({'success': True, 'message': 'Database schema recreated successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 def getUserLikesBy(user_likes):

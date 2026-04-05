@@ -1,33 +1,568 @@
-{% extends 'base.html' %}
-{% block title %}Profile - Movie Recommender{% endblock %}
-{% block content %}
-<section class="section">
-    <div class="container">
-        <div class="mb-5">
-            <h1 class="title is-3 mb-2">Profile</h1>
-            <p class="subtitle is-6 has-text-grey">Profile access is open even before login so you can preview the account flow.</p>
-        </div>
+{% extends "base.html" %}
 
-        <div class="box profile-card">
-            <h2 class="title is-5 mb-3">Profile setup</h2>
-            <div class="content">
-                <ul>
-                    <li>Update user name</li>
-                    <li>Update algorithm, UI, and genre ratings</li>
-                    <li>Paginated movie rating history table</li>
-                    <li>Clean all ratings</li>
-                    <li>Paginated feedback history for logged-in users</li>
-                </ul>
+{% block title %}Profile - Movie Recommender{% endblock %}
+
+{% if g.user %}<meta name="user" content="logged-in" data-user-id="{{ g.user.id }}">{% endif %}
+
+{% block content %}
+<main>
+    <div id="profile-app" class="profile-container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <h1 class="title">Profile</h1>
+            <div class="profile-info">
+                {% if g.user %}
+                    <div class="info-item">
+                        <label class="info-label">Username</label>
+                        <input 
+                            class="info-input" 
+                            type="text" 
+                            v-model="profile.username"
+                            placeholder="Enter your username"
+                        />
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">Email</label>
+                        <div class="info-display">{{ g.user.email }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">Joined</label>
+                        <div class="info-display">{{ g.user.created_at.strftime('%Y-%m-%d') }}</div>
+                    </div>
+                    <button @click="updateProfile" class="button is-primary update-btn">Update Profile</button>
+                {% else %}
+                    <p class="help is-info">
+                        <strong>You are not logged in.</strong> Please <a href="{{ url_for('auth.login') }}">login</a> or 
+                        <a href="{{ url_for('auth.register') }}">register</a> to save your preferences.
+                    </p>
+                {% endif %}
             </div>
         </div>
+
+        <!-- Preferences Section -->
+        <div class="preferences-section">
+            <h2 class="subtitle">Preferences</h2>
+            
+            <!-- Algorithm Selection -->
+            <div class="pref-item">
+                <label class="pref-label">Preferred Algorithm</label>
+                <div class="pref-options">
+                    <button 
+                        @click="updatePreference('algorithm', 'algo1')"
+                        :class="['pref-btn', { 'is-active': profile.algorithm === 'algo1' }]"
+                    >
+                        Algorithm 1
+                    </button>
+                    <button 
+                        @click="updatePreference('algorithm', 'algo2')"
+                        :class="['pref-btn', { 'is-active': profile.algorithm === 'algo2' }]"
+                    >
+                        Algorithm 2
+                    </button>
+                </div>
+            </div>
+
+            <!-- UI Mode Selection -->
+            <div class="pref-item">
+                <label class="pref-label">UI Theme</label>
+                <div class="pref-options">
+                    <button 
+                        @click="updatePreference('ui', '1')"
+                        :class="['pref-btn', { 'is-active': profile.uiMode === '1' }]"
+                    >
+                        Dark Mode
+                    </button>
+                    <button 
+                        @click="updatePreference('ui', '2')"
+                        :class="['pref-btn', { 'is-active': profile.uiMode === '2' }]"
+                    >
+                        Light Mode
+                    </button>
+                </div>
+            </div>
+
+            <!-- Genre Preferences -->
+            <div class="pref-item">
+                <label class="pref-label">Genre Preferences (0-10)</label>
+                <div class="genres-grid">
+                    <div v-for="genre in genres" :key="genre.id" class="genre-pref">
+                        <label>[[genre.name]]</label>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="10" 
+                            v-model.number="genreScores[genre.id]"
+                            @change="updateGenreScore(genre.id)"
+                            class="genre-slider"
+                        />
+                        <span class="genre-value">[[ genreScores[genre.id] || 0 ]]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ratings Table Section -->
+        <div class="ratings-section" v-if="hasRatings">
+            <div class="section-header">
+                <h2 class="subtitle">Movie Ratings</h2>
+                <button @click="clearAllRatings" class="button is-danger is-small">Clear All</button>
+            </div>
+
+            <div class="table-container">
+                <table class="table is-fullwidth">
+                    <thead>
+                        <tr>
+                            <th>Movie</th>
+                            <th>Year</th>
+                            <th>Rating</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="rating in paginatedRatings" :key="rating.id">
+                            <td>[[ rating.movie.title ]]</td>
+                            <td>[[ rating.movie.year ]]</td>
+                            <td>
+                                <span class="rating-badge">
+                                    [[ rating.rating.toFixed(1) ]] ⭐
+                                </span>
+                            </td>
+                            <td>[[ formatDate(rating.timestamp) ]]</td>
+                            <td>
+                                <button 
+                                    @click="deleteRating(rating.id)"
+                                    class="button is-small is-text"
+                                >
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" v-if="totalRatingsPages > 1">
+                <button 
+                    @click="currentRatingsPage = Math.max(1, currentRatingsPage - 1)"
+                    :disabled="currentRatingsPage === 1"
+                    class="pagination-btn"
+                >
+                    Previous
+                </button>
+                <span class="pagination-info">
+                    Page [[ currentRatingsPage ]] of [[ totalRatingsPages ]]
+                </span>
+                <button 
+                    @click="currentRatingsPage = Math.min(totalRatingsPages, currentRatingsPage + 1)"
+                    :disabled="currentRatingsPage === totalRatingsPages"
+                    class="pagination-btn"
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+
+        <!-- Feedback Table Section (Logged-in users only) -->
+        <div class="feedback-section" v-if="isLoggedIn && hasFeedback">
+            <h2 class="subtitle">Your Feedback Submissions</h2>
+
+            <div class="table-container">
+                <table class="table is-fullwidth">
+                    <thead>
+                        <tr>
+                            <th>Feedback Type</th>
+                            <th>Your Vote</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="feedback in paginatedFeedback" :key="feedback.id">
+                            <td>
+                                <span class="feedback-type-badge">
+                                    [[ formatFeedbackType(feedback.feedback_type) ]]
+                                </span>
+                            </td>
+                            <td>[[ feedback.vote_choice ]]</td>
+                            <td>[[ feedback.voter_name || 'N/A' ]]</td>
+                            <td>[[ feedback.voter_email || 'N/A' ]]</td>
+                            <td>[[ formatDate(feedback.created_at) ]]</td>
+                            <td>
+                                <button 
+                                    @click="editFeedback(feedback)"
+                                    class="button is-small is-text"
+                                >
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" v-if="totalFeedbackPages > 1">
+                <button 
+                    @click="currentFeedbackPage = Math.max(1, currentFeedbackPage - 1)"
+                    :disabled="currentFeedbackPage === 1"
+                    class="pagination-btn"
+                >
+                    Previous
+                </button>
+                <span class="pagination-info">
+                    Page [[ currentFeedbackPage ]] of [[ totalFeedbackPages ]]
+                </span>
+                <button 
+                    @click="currentFeedbackPage = Math.min(totalFeedbackPages, currentFeedbackPage + 1)"
+                    :disabled="currentFeedbackPage === totalFeedbackPages"
+                    class="pagination-btn"
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+
+        <!-- No Ratings Message -->
+        <div v-if="!hasRatings && !hasFeedback" class="empty-state">
+            <p>No data yet. Start by rating some movies on the <a href="/">home page</a>!</p>
+        </div>
+
+        <!-- Status Message -->
+        <div v-if="statusMessage" :class="['status-message', statusType]">
+            [[ statusMessage ]]
+        </div>
     </div>
-</section>
+</main>
 
 <style>
-    .profile-card {
-        border-radius: 18px;
-        border: 1px solid #eceef5;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+    .profile-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .profile-header {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: var(--card-shadow);
+    }
+
+    .profile-header .title {
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .info-input,
+    .info-display {
+        padding: 0.6rem 0.8rem;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+        color: var(--text-primary);
+    }
+
+    .info-display {
+        background: var(--bg-muted);
+    }
+
+    .update-btn {
+        align-self: flex-end;
+    }
+
+    /* Preferences Section */
+    .preferences-section {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: var(--card-shadow);
+    }
+
+    .pref-item {
+        margin-bottom: 2rem;
+    }
+
+    .pref-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .pref-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+    }
+
+    .pref-options {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .pref-btn {
+        padding: 0.6rem 1.2rem;
+        border: 2px solid var(--chip-border);
+        background: var(--chip-bg);
+        color: var(--chip-text);
+        border-radius: 10px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .pref-btn:hover {
+        border-color: var(--chip-active-bg);
+        transform: translateY(-2px);
+    }
+
+    .pref-btn.is-active {
+        background: var(--chip-active-bg);
+        color: var(--chip-active-text);
+        border-color: var(--chip-active-bg);
+    }
+
+    /* Genres Grid */
+    .genres-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .genre-pref {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .genre-pref label {
+        font-weight: 500;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+    }
+
+    .genre-slider {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--border-soft);
+        outline: none;
+        -webkit-appearance: none;
+    }
+
+    .genre-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #2d5aa3;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .genre-slider::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #2d5aa3;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .genre-value {
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    /* Tables Section */
+    .ratings-section,
+    .feedback-section {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: var(--card-shadow);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header .subtitle {
+        margin: 0;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin-bottom: 1.5rem;
+    }
+
+    .table {
+        background: transparent;
+        color: var(--text-primary);
+    }
+
+    .table thead tr {
+        border-bottom: 2px solid var(--border-soft);
+    }
+
+    .table th {
+        color: var(--text-secondary);
+        font-weight: 600;
+        padding: 0.75rem;
+    }
+
+    .table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .rating-badge,
+    .feedback-type-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: var(--chip-bg);
+        color: var(--chip-text);
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .pagination-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        color: var(--chip-text);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        border-color: var(--chip-active-bg);
+        transform: translateY(-1px);
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pagination-info {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-secondary);
+    }
+
+    /* Status Message */
+    .status-message {
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+        margin-top: 1rem;
+        animation: slideIn 0.3s ease;
+    }
+
+    .status-message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .status-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .profile-info {
+            grid-template-columns: 1fr;
+        }
+
+        .genres-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .pref-options {
+            flex-direction: column;
+        }
+
+        .pref-btn {
+            width: 100%;
+        }
+
+        .section-header {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: stretch;
+        }
+
+        .section-header .button {
+            width: 100%;
+        }
     }
 </style>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="{{ url_for('static', filename='js/localStorage-utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+
 {% endblock %}

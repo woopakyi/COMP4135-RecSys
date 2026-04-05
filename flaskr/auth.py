@@ -1,5 +1,4 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from werkzeug.security import generate_password_hash, check_password_hash
 from flaskr.models import db, User
 from sqlalchemy.exc import IntegrityError
 
@@ -11,7 +10,7 @@ def register():
     """Register a new user"""
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
         
@@ -71,15 +70,15 @@ def register():
 def login():
     """Log in a user"""
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         
-        if not username or not password:
-            flash('Username and password are required', 'error')
+        if not email or not password:
+            flash('Email and password are required', 'error')
             return render_template('auth/login.html')
         
         # Find user
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(email=email).first()
         
         if user and user.check_password(password):
             # Set session
@@ -89,10 +88,10 @@ def login():
             session['algorithm'] = user.algorithm
             session['ui_variant'] = user.ui_variant
             
-            flash(f'Welcome back, {username}!', 'success')
+            flash(f'Welcome back, {user.username}!', 'success')
             return redirect(url_for('main.index'))
         else:
-            flash('Invalid username or password', 'error')
+            flash('Invalid email or password', 'error')
             return render_template('auth/login.html')
     
     return render_template('auth/login.html')

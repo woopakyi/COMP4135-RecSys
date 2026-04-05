@@ -6,28 +6,134 @@
     <title>{% block title %}Movie Recommender{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    
+    <!-- Critical CSS to prevent FOUC (Flash of Unstyled Content) -->
+    <style>
+        /* Prevent layout shift and unstyled flash */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Apply theme immediately before page renders */
+        .app-body {
+            background: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .app-body.ui-dark {
+            --bg-page: #0b1220;
+            --bg-elevated: #111a2e;
+            --bg-muted: #0f172a;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-soft: #253248;
+            --chip-bg: #16233b;
+            --chip-text: #cbd5e1;
+            --chip-border: #334155;
+            --chip-active-bg: #38bdf8;
+            --chip-active-text: #0b1220;
+            --panel-bg: rgba(17, 26, 46, 0.9);
+            --panel-border: #2a3a56;
+            --panel-shadow: 0 18px 50px rgba(2, 6, 23, 0.45);
+            --card-bg: #131d33;
+            --card-border: #28364f;
+            --card-shadow: 0 10px 24px rgba(2, 6, 23, 0.35);
+            --hero-bg: linear-gradient(180deg, #0b1220 0%, #121b30 100%);
+            --nav-bg: rgba(11, 18, 32, 0.88);
+            --footer-bg: #0b1220;
+            --empty-border: #334155;
+            --empty-bg: linear-gradient(180deg, #111a2e 0%, #0f172a 100%);
+        }
+
+        .app-body.ui-light {
+            --bg-page: #f6f7fb;
+            --bg-elevated: #ffffff;
+            --bg-muted: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border-soft: #e2e8f0;
+            --chip-bg: #ffffff;
+            --chip-text: #334155;
+            --chip-border: #dbe2ea;
+            --chip-active-bg: #111827;
+            --chip-active-text: #ffffff;
+            --panel-bg: rgba(255, 255, 255, 0.92);
+            --panel-border: #eceef5;
+            --panel-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+            --card-bg: #ffffff;
+            --card-border: #eceef5;
+            --card-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+            --hero-bg: linear-gradient(180deg, #f6f7fb 0%, #ffffff 100%);
+            --nav-bg: rgba(255, 255, 255, 0.9);
+            --footer-bg: transparent;
+            --empty-border: #cbd5e1;
+            --empty-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .app-navbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: var(--nav-bg);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border-soft);
+        }
+    </style>
 </head>
-<body>
+
+<!-- Set body class immediately to avoid FOUC -->
+<script>
+    (function() {
+        const activeUI = (document.cookie.match(/user_ui=([^;]+)/) || ['', '1'])[1];
+        document.documentElement.setAttribute('data-ui', activeUI);
+        // Cookies may not be parsed yet, so we'll rely on server-side rendering
+    })();
+</script>
+
+{% set active_ui = request.cookies.get('user_ui', '1') %}
+<body class="app-body {% if active_ui == '2' %}ui-light{% else %}ui-dark{% endif %}">
 <nav class="navbar app-navbar" role="navigation" aria-label="main navigation">
-    <div class="container is-fluid app-navbar-inner">
-        <div class="app-navbar-links">
-            <a class="navbar-item" href="/">Home</a>
-            <a class="navbar-item" href="/profile">Profile</a>
-            <a class="navbar-item" href="/feedback">Feedback</a>
-            <a class="navbar-item" href="/evaluation">Evaluation</a>
-        </div>
-        <div class="app-navbar-action">
-            {% if g.user %}
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <span style="color: #1e293b; font-weight: 500;">{{ g.user.username }}</span>
-                    <a class="button is-light is-small" href="{{ url_for('auth.logout') }}">Logout</a>
+    <div class="container is-fluid" style="padding: 0.8rem 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem;">
+            <!-- Left: Brand and Links -->
+            <div class="app-navbar-left" style="display: flex; align-items: center; gap: 0;">
+                <a href="/" class="navbar-item" style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary); padding: 0 1rem;">
+                    🎬 Recommender
+                </a>
+                <div class="app-navbar-links" style="display: flex; align-items: center; gap: 0; margin-left: 1rem;">
+                    <a class="navbar-item" href="/" style="padding: 0.45rem 0.7rem; border-radius: 10px; font-weight: 500; color: var(--text-primary);">Home</a>
+                    <a class="navbar-item" href="/profile" style="padding: 0.45rem 0.7rem; border-radius: 10px; font-weight: 500; color: var(--text-primary);">Profile</a>
+                    <a class="navbar-item" href="/feedback" style="padding: 0.45rem 0.7rem; border-radius: 10px; font-weight: 500; color: var(--text-primary);">Feedback</a>
                 </div>
-            {% else %}
-                <div style="display: flex; gap: 0.5rem;">
-                    <a class="button is-light" href="{{ url_for('auth.login') }}">Login</a>
-                    <a class="button is-primary" href="{{ url_for('auth.register') }}">Sign up</a>
-                </div>
-            {% endif %}
+            </div>
+
+            <!-- Right: Auth Actions -->
+            <div class="app-navbar-right" style="display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0;">
+                {% if g.user %}
+                    <span style="color: var(--text-primary); font-weight: 500; font-size: 0.95rem;">{{ g.user.username }}</span>
+                    <a class="button is-small" href="{{ url_for('auth.logout') }}" 
+                       style="padding: 0.45rem 0.9rem; border-radius: 10px; background: var(--chip-bg); color: var(--text-primary); border: 1px solid var(--chip-border); font-weight: 500; transition: all 0.2s ease;"
+                       onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--chip-active-bg)'"
+                       onmouseout="this.style.transform='none'">Logout</a>
+                {% else %}
+                    <a class="button is-small" href="{{ url_for('auth.login') }}" 
+                       style="padding: 0.45rem 0.9rem; border-radius: 10px; background: var(--chip-bg); color: var(--text-primary); border: 1px solid var(--chip-border); font-weight: 500; transition: all 0.2s ease;"
+                       onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--chip-active-bg)'"
+                       onmouseout="this.style.transform='none'">Login</a>
+                    <a class="button is-small" href="{{ url_for('auth.register') }}" 
+                       style="padding: 0.45rem 0.9rem; border-radius: 10px; background: #2d5aa3; color: #ffffff; border: 1px solid #2d5aa3; font-weight: 500; transition: all 0.2s ease;"
+                       onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.9'"
+                       onmouseout="this.style.transform='none'; this.style.opacity='1'">Sign up</a>
+                {% endif %}
+            </div>
         </div>
     </div>
 </nav>
@@ -50,47 +156,150 @@
 </footer>
 
 <style>
-    body {
-        background: #f6f7fb;
+    /* Layout and structure */
+    .app-body {
+        display: flex;
+        flex-direction: column;
         min-height: 100vh;
     }
 
+    main {
+        flex: 1;
+        padding: 1.5rem;
+        max-width: 1240px;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    /* Typography styling */
+    .app-body .title,
+    .app-body .subtitle,
+    .app-body .label,
+    .app-body .content,
+    .app-body p,
+    .app-body li,
+    .app-body span {
+        color: var(--text-primary);
+    }
+
+    .app-body .has-text-grey,
+    .app-body .has-text-grey-dark,
+    .app-body .help {
+        color: var(--text-secondary) !important;
+    }
+
+    /* Card and component styling */
+    .app-body .box,
+    .app-body .card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: var(--card-shadow);
+        color: var(--text-primary);
+    }
+
+    .app-body .box a,
+    .app-body .card a {
+        color: #2d5aa3;
+    }
+
+    .app-body .box a:hover,
+    .app-body .card a:hover {
+        color: #274a81;
+    }
+
+    /* Input styling */
+    .app-body input,
+    .app-body textarea,
+    .app-body select {
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        border: 1px solid var(--border-soft);
+    }
+
+    .app-body input:focus,
+    .app-body textarea:focus,
+    .app-body select:focus {
+        border-color: #2d5aa3;
+        box-shadow: 0 0 0 3px rgba(45, 90, 163, 0.1);
+    }
+
+    /* Button styling */
+    .app-body .button {
+        color: var(--text-primary);
+        border-color: var(--border-soft);
+        background: var(--bg-elevated);
+        font-weight: 500;
+        transition: all 0.12s ease;
+    }
+
+    .app-body .button:hover {
+        transform: translateY(-1px);
+        border-color: #2d5aa3;
+        background: var(--panel-bg);
+    }
+
+    .app-body .button.is-primary {
+        background: #2d5aa3;
+        color: #ffffff;
+        border-color: #2d5aa3;
+    }
+
+    .app-body .button.is-primary:hover {
+        background: #274a81;
+        border-color: #274a81;
+    }
+
+    /* Navbar specific */
     .app-navbar {
         position: sticky;
         top: 0;
         z-index: 50;
-        background: rgba(255, 255, 255, 0.9);
+        background: var(--nav-bg);
         backdrop-filter: blur(14px);
-        border-bottom: 1px solid #eceef5;
+        border-bottom: 1px solid var(--border-soft);
+        margin-bottom: 1.5rem;
     }
 
-    .app-navbar-inner {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        min-height: 4.5rem;
+    .navbar-item {
+        padding: 0.45rem 0.7rem !important;
+        border-radius: 10px;
+        transition: all 0.2s ease;
     }
 
-    .app-navbar-links {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        flex-wrap: wrap;
+    .navbar-item:hover {
+        background: color-mix(in srgb, var(--text-primary) 10%, transparent);
     }
 
-    .app-navbar-links .navbar-item {
-        font-weight: 600;
-        color: #334155;
+    /* Footer styling */
+    .footer {
+        background: var(--footer-bg);
+        border-top: 1px solid var(--border-soft);
+        color: var(--text-secondary);
+        margin-top: 3rem;
+        padding: 2rem 1.5rem;
     }
 
-    .app-navbar-links .navbar-item:hover {
-        color: #111827;
-        background: rgba(15, 23, 42, 0.04);
+    .footer a {
+        color: #2d5aa3;
     }
 
-    .app-navbar-action {
-        flex: 0 0 auto;
+    .footer a:hover {
+        color: #274a81;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        main {
+            padding: 1rem;
+        }
+
+        .app-navbar-right {
+            flex-wrap: wrap;
+        }
+
+        .app-navbar-links {
+            display: none;
+        }
     }
 </style>
 </body>

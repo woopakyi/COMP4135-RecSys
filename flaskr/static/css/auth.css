@@ -1,0 +1,36 @@
+.auth-wrap {
+  min-height: calc(100vh - 14rem);
+  display: grid;
+  place-items: center;
+  position: relative;
+  padding: 2rem 1rem;
+}
+
+.auth-backdrop-shape {
+  position: absolute;
+  inset: 10% 8% auto;
+  height: 180px;
+  background: radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.16), transparent 60%),
+              radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.16), transparent 60%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.auth-card {
+  width: min(520px, 94vw);
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  background: var(--card-bg);
+  position: relative;
+}
+
+.auth-card.login-card {
+  width: min(460px, 94vw);
+}
+
+.auth-eye {
+  cursor: pointer;
+  pointer-events: auto;
+}

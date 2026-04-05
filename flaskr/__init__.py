@@ -41,6 +41,24 @@ def create_app(test_config=None):
         db.create_all()
         seed_movies_from_csv(app)
 
+        # Check if schema is out of sync with PostgreSQL and fix it
+        try:
+            from .models import User
+            User.query.first()  # Test query to check if columns exist
+        except Exception as e:
+            if 'UndefinedColumn' in str(type(e).__name__) or 'column' in str(e).lower():
+                print("⚠ Database schema out of sync, recreating...")
+                try:
+                    db.drop_all()
+                    db.create_all()
+                    seed_movies_from_csv(app)
+                    print("✅ Database schema recovered")
+                except Exception as recovery_error:
+                    print(f"❌ Recovery failed: {recovery_error}")
+                    raise
+            else:
+                raise
+
     # Import and register functions
     from . import scrape
     app.register_blueprint(scrape.bp)
@@ -50,6 +68,9 @@ def create_app(test_config=None):
     
     from . import auth
     app.register_blueprint(auth.bp)
+
+    from . import api
+    app.register_blueprint(api.api_bp)
 
     return app
 

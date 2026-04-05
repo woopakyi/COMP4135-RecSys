@@ -1,33 +1,679 @@
 {% extends 'base.html' %}
 {% block title %}Feedback - Movie Recommender{% endblock %}
+
+{% if g.user %}<meta name="user" content="logged-in" data-user-logged-in="true">{% endif %}
+
 {% block content %}
-<section class="section">
-    <div class="container">
-        <div class="mb-5">
-            <h1 class="title is-3 mb-2">Feedback</h1>
-            <p class="subtitle is-6 has-text-grey">Feedback is available whether or not you are logged in.</p>
+<main>
+    <div id="feedback-app" class="feedback-container">
+        <div class="feedback-header">
+            <h1 class="title">Your Feedback Matters</h1>
+            <p class="subtitle">Help us improve the recommender system by providing your evaluation</p>
         </div>
 
-        <div class="box feedback-card">
-            <h2 class="title is-5 mb-3">Feedback scope</h2>
-            <div class="content">
-                <ul>
-                    <li>Logged user or anonymous submission</li>
-                    <li>Algorithm evaluation based on UI 1 or UI 2</li>
-                    <li>UI evaluation based on Algorithm 1 or Algorithm 2</li>
-                    <li>Consent checkbox for logged-user submissions</li>
-                    <li>Editable submission per evaluation type</li>
-                </ul>
+        <!-- Step 1: Submission Type -->
+        <div class="feedback-section" v-if="step === 1">
+            <h2 class="section-title">Step 1: How would you like to submit feedback?</h2>
+            <div class="choice-grid">
+                <button 
+                    @click="selectSubmissionType('logged')"
+                    :class="['choice-card', { 'is-selected': submissionType === 'logged' }]"
+                    v-if="isLoggedIn"
+                >
+                    <span class="choice-icon">👤</span>
+                    <span class="choice-label">As Logged-In User</span>
+                    <span class="choice-desc">Your account will be recorded</span>
+                </button>
+
+                <button 
+                    @click="selectSubmissionType('anonymous')"
+                    :class="['choice-card', { 'is-selected': submissionType === 'anonymous' }]"
+                >
+                    <span class="choice-icon">🔒</span>
+                    <span class="choice-label">Anonymous</span>
+                    <span class="choice-desc">No personal details recorded</span>
+                </button>
+            </div>
+
+            <button 
+                @click="proceedToStep(2)"
+                :disabled="!submissionType"
+                class="button is-primary proceed-btn"
+            >
+                Next
+            </button>
+        </div>
+
+        <!-- Step 2: Name & Email (for logged submissions) -->
+        <div class="feedback-section" v-if="step === 2 && submissionType === 'logged'">
+            <h2 class="section-title">Step 2: Participant Information</h2>
+            <p class="section-desc">This information may differ from your account details</p>
+
+            <div class="form-group">
+                <label>Full Name</label>
+                <input 
+                    v-model="voterName"
+                    type="text"
+                    placeholder="Enter your full name"
+                    class="input"
+                />
+            </div>
+
+            <div class="form-group">
+                <label>Email Address</label>
+                <input 
+                    v-model="voterEmail"
+                    type="email"
+                    placeholder="Enter your email"
+                    class="input"
+                />
+            </div>
+
+            <div class="button-group">
+                <button @click="proceedToStep(1)" class="button">Back</button>
+                <button 
+                    @click="proceedToStep(3)"
+                    :disabled="!voterName || !voterEmail"
+                    class="button is-primary"
+                >
+                    Next
+                </button>
             </div>
         </div>
+
+        <!-- Step 2: Skip for Anonymous -->
+        <div class="feedback-section" v-if="step === 2 && submissionType === 'anonymous'">
+            <div class="notification-info">
+                <p>Perfect! Your feedback will be submitted anonymously.</p>
+            </div>
+
+            <div class="button-group">
+                <button @click="proceedToStep(1)" class="button">Back</button>
+                <button @click="proceedToStep(3)" class="button is-primary">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Feedback Type Selection -->
+        <div class="feedback-section" v-if="step === 3">
+            <h2 class="section-title">Step 3: What would you like to evaluate?</h2>
+            <div class="choice-grid">
+                <button 
+                    @click="selectFeedbackType('algo_ui1')"
+                    :class="['choice-card', { 'is-selected': feedbackType === 'algo_ui1' }]"
+                >
+                    <span class="choice-icon">🤖</span>
+                    <span class="choice-label">Algorithm Evaluation</span>
+                    <span class="choice-desc">Compare algorithms using UI 1 (Dark)</span>
+                </button>
+
+                <button 
+                    @click="selectFeedbackType('algo_ui2')"
+                    :class="['choice-card', { 'is-selected': feedbackType === 'algo_ui2' }]"
+                >
+                    <span class="choice-icon">🤖</span>
+                    <span class="choice-label">Algorithm Evaluation</span>
+                    <span class="choice-desc">Compare algorithms using UI 2 (Light)</span>
+                </button>
+
+                <button 
+                    @click="selectFeedbackType('ui_algo1')"
+                    :class="['choice-card', { 'is-selected': feedbackType === 'ui_algo1' }]"
+                >
+                    <span class="choice-icon">🎨</span>
+                    <span class="choice-label">UI Evaluation</span>
+                    <span class="choice-desc">Compare UI modes using Algorithm 1</span>
+                </button>
+
+                <button 
+                    @click="selectFeedbackType('ui_algo2')"
+                    :class="['choice-card', { 'is-selected': feedbackType === 'ui_algo2' }]"
+                >
+                    <span class="choice-icon">🎨</span>
+                    <span class="choice-label">UI Evaluation</span>
+                    <span class="choice-desc">Compare UI modes using Algorithm 2</span>
+                </button>
+            </div>
+
+            <div class="button-group">
+                <button @click="proceedToStep(2)" class="button">Back</button>
+                <button 
+                    @click="proceedToStep(4)"
+                    :disabled="!feedbackType"
+                    class="button is-primary"
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Voting -->
+        <div class="feedback-section" v-if="step === 4">
+            <h2 class="section-title">Step 4: Cast Your Vote</h2>
+
+            <!-- Algo Evaluation -->
+            <div v-if="isAlgorithmFeedback" class="voting-section">
+                <p class="voting-title">
+                    Which algorithm provides better recommendations?
+                    <span class="evaluation-context">(Evaluated on [[ getUiContext ]])</span>
+                </p>
+
+                <div class="vote-options">
+                    <button 
+                        @click="selectVote('better')"
+                        :class="['vote-btn', 'vote-algo1', { 'is-selected': voteChoice === 'better' }]"
+                    >
+                        <span class="vote-label">Algorithm 1</span>
+                        <span class="vote-desc">Better</span>
+                    </button>
+
+                    <button 
+                        @click="selectVote('same')"
+                        :class="['vote-btn', 'vote-same', { 'is-selected': voteChoice === 'same' }]"
+                    >
+                        <span class="vote-label">Both Equal</span>
+                        <span class="vote-desc">Same Quality</span>
+                    </button>
+
+                    <button 
+                        @click="selectVote('worse')"
+                        :class="['vote-btn', 'vote-algo2', { 'is-selected': voteChoice === 'worse' }]"
+                    >
+                        <span class="vote-label">Algorithm 2</span>
+                        <span class="vote-desc">Better</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- UI Evaluation -->
+            <div v-if="isUiFeedback" class="voting-section">
+                <p class="voting-title">
+                    Which UI do you prefer?
+                    <span class="evaluation-context">(Evaluated with [[ getAlgorithmContext ]])</span>
+                </p>
+
+                <div class="vote-options">
+                    <button 
+                        @click="selectVote('better')"
+                        :class="['vote-btn', 'vote-ui1', { 'is-selected': voteChoice === 'better' }]"
+                    >
+                        <span class="vote-label">UI 1</span>
+                        <span class="vote-desc">Dark Mode</span>
+                    </button>
+
+                    <button 
+                        @click="selectVote('same')"
+                        :class="['vote-btn', 'vote-same', { 'is-selected': voteChoice === 'same' }]"
+                    >
+                        <span class="vote-label">Both Equal</span>
+                        <span class="vote-desc">Same Quality</span>
+                    </button>
+
+                    <button 
+                        @click="selectVote('worse')"
+                        :class="['vote-btn', 'vote-ui2', { 'is-selected': voteChoice === 'worse' }]"
+                    >
+                        <span class="vote-label">UI 2</span>
+                        <span class="vote-desc">Light Mode</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button @click="proceedToStep(3)" class="button">Back</button>
+                <button 
+                    @click="proceedToStep(5)"
+                    :disabled="!voteChoice"
+                    class="button is-primary"
+                >
+                    Review & Submit
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 5: Consent & Submission -->
+        <div class="feedback-section" v-if="step === 5">
+            <h2 class="section-title">Step 5: Review Your Feedback</h2>
+
+            <div class="review-box">
+                <div class="review-item">
+                    <span class="review-label">Submission Type:</span>
+                    <span class="review-value">[[ submissionType === 'logged' ? 'Logged User' : 'Anonymous' ]]</span>
+                </div>
+                <div class="review-item" v-if="submissionType === 'logged'">
+                    <span class="review-label">Name & Email:</span>
+                    <span class="review-value">[[ voterName ]] ([[ voterEmail ]])</span>
+                </div>
+                <div class="review-item">
+                    <span class="review-label">Evaluation Type:</span>
+                    <span class="review-value">[[ formatFeedbackType(feedbackType) ]]</span>
+                </div>
+                <div class="review-item">
+                    <span class="review-label">Your Vote:</span>
+                    <span class="review-value">[[ formatVote(voteChoice, feedbackType) ]]</span>
+                </div>
+            </div>
+
+            <!-- Consent Checkbox (for logged users) -->
+            <div v-if="submissionType === 'logged'" class="consent-section">
+                <label class="consent-checkbox">
+                    <input 
+                        type="checkbox"
+                        v-model="consentAgreed"
+                    />
+                    <span>
+                        I understand that the feedback and demographic information provided from me 
+                        will be used for the improvement of the system recommendation of this website 
+                        based on the project of COMP4135.
+                    </span>
+                </label>
+            </div>
+
+            <div class="button-group">
+                <button @click="proceedToStep(4)" class="button">Back</button>
+                <button 
+                    @click="submitFeedback"
+                    :disabled="submissionType === 'logged' && !consentAgreed"
+                    :class="['button', 'is-primary', { 'is-loading': isSubmitting }]"
+                >
+                    Submit Feedback
+                </button>
+            </div>
+        </div>
+
+        <!-- Success Message -->
+        <div v-if="step === 6" class="success-section">
+            <div class="success-icon">✓</div>
+            <h2 class="success-title">Thank You!</h2>
+            <p class="success-message">Your feedback has been submitted successfully</p>
+            <button @click="resetForm" class="button is-primary">Submit More Feedback</button>
+            <router-link to="/profile" class="link-btn">View Your Submissions</router-link>
+        </div>
+
+        <!-- Status Messages -->
+        <div v-if="statusMessage" :class="['status-message', statusType]">
+            [[ statusMessage ]]
+        </div>
     </div>
-</section>
+</main>
 
 <style>
-    .feedback-card {
-        border-radius: 18px;
-        border: 1px solid #eceef5;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+    .feedback-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .feedback-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .feedback-header .title {
+        margin-bottom: 0.5rem;
+    }
+
+    .feedback-header .subtitle {
+        color: var(--text-secondary);
+    }
+
+    .feedback-section {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 2.5rem;
+        box-shadow: var(--card-shadow);
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .section-desc {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+
+    /* Choice Grid */
+    .choice-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .choice-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        background: var(--bg-elevated);
+        border: 2px solid var(--border-soft);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--text-primary);
+    }
+
+    .choice-card:hover {
+        border-color: #2d5aa3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(45, 90, 163, 0.15);
+    }
+
+    .choice-card.is-selected {
+        background: #2d5aa3;
+        border-color: #2d5aa3;
+        color: #ffffff;
+    }
+
+    .choice-icon {
+        font-size: 2rem;
+    }
+
+    .choice-label {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .choice-desc {
+        font-size: 0.85rem;
+        opacity: 0.8;
+    }
+
+    /* Form Groups */
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 0.7rem;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: #2d5aa3;
+        box-shadow: 0 0 0 3px rgba(45, 90, 163, 0.1);
+    }
+
+    /* Voting Section */
+    .voting-section {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-soft);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 2rem 0;
+    }
+
+    .voting-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+    }
+
+    .evaluation-context {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 400;
+    }
+
+    .vote-options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .vote-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1.5rem;
+        background: var(--bg-muted);
+        border: 2px solid var(--border-soft);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--text-primary);
+    }
+
+    .vote-btn:hover {
+        transform: translateY(-2px);
+        border-color: #2d5aa3;
+    }
+
+    .vote-btn.is-selected {
+        background: #2d5aa3;
+        border-color: #2d5aa3;
+        color: #ffffff;
+    }
+
+    .vote-label {
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .vote-desc {
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+
+    /* Review Box */
+    .review-box {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-soft);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .review-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .review-item:last-child {
+        border-bottom: none;
+    }
+
+    .review-label {
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .review-value {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    /* Consent Section */
+    .consent-section {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .consent-checkbox {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        cursor: pointer;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    .consent-checkbox input {
+        width: 20px;
+        height: 20px;
+        margin-top: 2px;
+        cursor: pointer;
+    }
+
+    /* Button Groups */
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+    }
+
+    .proceed-btn {
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .button {
+        padding: 0.7rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 500;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        color: var(--chip-text);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        border-color: #2d5aa3;
+    }
+
+    .button.is-primary {
+        background: #2d5aa3;
+        color: #ffffff;
+        border-color: #2d5aa3;
+    }
+
+    .button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Success Section -->
+    .success-section {
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+
+    .success-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        animation: scaleIn 0.5s ease;
+    }
+
+    @keyframes scaleIn {
+        from {
+            transform: scale(0);
+        }
+        to {
+            transform: scale(1);
+        }
+    }
+
+    .success-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .success-message {
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+    }
+
+    .link-btn {
+        display: inline-block;
+        margin-left: 1rem;
+        color: #2d5aa3;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    /* Status Message */
+    .status-message {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-top: 1rem;
+        animation: slideIn 0.3s ease;
+    }
+
+    .status-message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .status-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .notification-info {
+        background: #c0e7ff;
+        border: 1px solid #0a3d62;
+        border-radius: 12px;
+        padding: 1rem;
+        color: var(--text-primary);
+        margin: 1.5rem 0;
+    }
+
+    @media (max-width: 768px) {
+        .feedback-section {
+            padding: 1.5rem;
+        }
+
+        .choice-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .vote-options {
+            grid-template-columns: 1fr;
+        }
+
+        .button-group {
+            flex-direction: column;
+        }
+
+        .button-group .button {
+            width: 100%;
+        }
     }
 </style>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="{{ url_for('static', filename='js/feedback.js') }}"></script>
 {% endblock %}
