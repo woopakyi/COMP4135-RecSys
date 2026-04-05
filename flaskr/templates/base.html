@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Movie Recommender{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+<nav class="navbar app-navbar" role="navigation" aria-label="main navigation">
+    <div class="container is-fluid app-navbar-inner">
+        <div class="app-navbar-links">
+            <a class="navbar-item" href="/">Home</a>
+            <a class="navbar-item" href="/profile">Profile</a>
+            <a class="navbar-item" href="/feedback">Feedback</a>
+            <a class="navbar-item" href="/evaluation">Evaluation</a>
+        </div>
+        <div class="app-navbar-action">
+            <button class="button is-link is-light" type="button">Login / Sign in</button>
+        </div>
+    </div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<footer class="footer mt-6">
+    <div class="container is-max-widescreen">
+        <div class="content has-text-centered">
+            <p>
+                Copyright © 2026 <a href="https://hci.comp.hkbu.edu.hk" target="_blank"><strong>PI Lab</strong></a>. All Rights Reserved.
+            </p>
+            <a href="https://www.comp.hkbu.edu.hk" target="_blank"><img src="/static/img/comp-logo.png"
+                                                                            alt="logo"
+                                                                            style="height: 30px; margin-right: 20px"></a>
+            <a href="https://hkbu.edu.hk" target="_blank"><img src="/static/img/bu-logo.png" alt="logo"
+                                                                   style="height: 30px;"></a>
+        </div>
+    </div>
+</footer>
+
+<style>
+    body {
+        background: #f6f7fb;
+        min-height: 100vh;
+    }
+
+    .app-navbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid #eceef5;
+    }
+
+    .app-navbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 4.5rem;
+    }
+
+    .app-navbar-links {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+    }
+
+    .app-navbar-links .navbar-item {
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .app-navbar-links .navbar-item:hover {
+        color: #111827;
+        background: rgba(15, 23, 42, 0.04);
+    }
+
+    .app-navbar-action {
+        flex: 0 0 auto;
+    }
+</style>
+</body>
+</html>

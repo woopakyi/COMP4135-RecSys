@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Feedback - Movie Recommender{% endblock %}
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="mb-5">
+            <h1 class="title is-3 mb-2">Feedback</h1>
+            <p class="subtitle is-6 has-text-grey">Feedback is available whether or not you are logged in.</p>
+        </div>
+
+        <div class="box feedback-card">
+            <h2 class="title is-5 mb-3">Feedback scope</h2>
+            <div class="content">
+                <ul>
+                    <li>Logged user or anonymous submission</li>
+                    <li>Algorithm evaluation based on UI 1 or UI 2</li>
+                    <li>UI evaluation based on Algorithm 1 or Algorithm 2</li>
+                    <li>Consent checkbox for logged-user submissions</li>
+                    <li>Editable submission per evaluation type</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .feedback-card {
+        border-radius: 18px;
+        border: 1px solid #eceef5;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+    }
+</style>
+{% endblock %}
