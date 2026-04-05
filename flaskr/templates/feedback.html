@@ -17,12 +17,13 @@
             <div class="choice-grid">
                 <button 
                     @click="selectSubmissionType('logged')"
-                    :class="['choice-card', { 'is-selected': submissionType === 'logged' }]"
-                    v-if="isLoggedIn"
+                    :class="['choice-card', { 'is-selected': submissionType === 'logged', 'is-disabled': !isLoggedIn }]"
+                    :disabled="!isLoggedIn"
                 >
                     <span class="choice-icon">👤</span>
                     <span class="choice-label">As Logged-In User</span>
                     <span class="choice-desc">Your account will be recorded</span>
+                    <span class="disabled-badge" v-if="!isLoggedIn">Sign in to use</span>
                 </button>
 
                 <button 
@@ -167,14 +168,6 @@
                     </button>
 
                     <button 
-                        @click="selectVote('same')"
-                        :class="['vote-btn', 'vote-same', { 'is-selected': voteChoice === 'same' }]"
-                    >
-                        <span class="vote-label">Both Equal</span>
-                        <span class="vote-desc">Same Quality</span>
-                    </button>
-
-                    <button 
                         @click="selectVote('worse')"
                         :class="['vote-btn', 'vote-algo2', { 'is-selected': voteChoice === 'worse' }]"
                     >
@@ -198,14 +191,6 @@
                     >
                         <span class="vote-label">UI 1</span>
                         <span class="vote-desc">Dark Mode</span>
-                    </button>
-
-                    <button 
-                        @click="selectVote('same')"
-                        :class="['vote-btn', 'vote-same', { 'is-selected': voteChoice === 'same' }]"
-                    >
-                        <span class="vote-label">Both Equal</span>
-                        <span class="vote-desc">Same Quality</span>
                     </button>
 
                     <button 
@@ -367,9 +352,10 @@
         cursor: pointer;
         transition: all 0.2s ease;
         color: var(--text-primary);
+        position: relative;
     }
 
-    .choice-card:hover {
+    .choice-card:hover:not(:disabled) {
         border-color: #2d5aa3;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(45, 90, 163, 0.15);
@@ -379,6 +365,29 @@
         background: #2d5aa3;
         border-color: #2d5aa3;
         color: #ffffff;
+    }
+
+    .choice-card.is-disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .choice-card.is-disabled:hover {
+        transform: none;
+        border-color: var(--border-soft);
+        box-shadow: none;
+    }
+
+    .disabled-badge {
+        position: absolute;
+        top: -8px;
+        right: 8px;
+        background: #ef4444;
+        color: white;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 700;
     }
 
     .choice-icon {
@@ -447,7 +456,7 @@
 
     .vote-options {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
         margin: 1.5rem 0;
     }

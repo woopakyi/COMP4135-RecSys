@@ -160,8 +160,12 @@ const app = createApp({
             }
         },
 
-        async updateGenreScore(genreId) {
-            const score = this.genreScores[genreId] || 0;
+        async updateGenreScore(genreId, score) {
+            // If score is not provided (called from older code), use the current score
+            if (score === undefined) {
+                score = this.genreScores[genreId] || 0;
+            }
+            this.genreScores[genreId] = score;
 
             if (!this.isLoggedIn) {
                 GenreStorage.savePreference(genreId, score);

@@ -84,18 +84,19 @@
             <!-- Genre Preferences -->
             <div class="pref-item">
                 <label class="pref-label">Genre Preferences (0-10)</label>
-                <div class="genres-grid">
-                    <div v-for="genre in genres" :key="genre.id" class="genre-pref">
-                        <label>[[genre.name]]</label>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max="10" 
-                            v-model.number="genreScores[genre.id]"
-                            @change="updateGenreScore(genre.id)"
-                            class="genre-slider"
-                        />
-                        <span class="genre-value">[[ genreScores[genre.id] || 0 ]]</span>
+                <div class="genre-preferences-list">
+                    <div v-for="genre in genres" :key="genre.id" class="genre-pref-row">
+                        <label class="genre-pref-name">[[genre.name]]</label>
+                        <div class="genre-pref-slider">
+                            <div class="slider-wrapper">
+                                <span class="slider-point">0</span>
+                                {% for rate in range(1, 10) %}
+                                <button class="slider-dot" :class="genreScores[genre.id] === {{ rate }} || (genreScores[genre.id] || 0) === {{ rate }} ? 'is-active' : ''" @click="updateGenreScore(genre.id, {{ rate }})" :title="'Rating: ' + {{ rate }}"></button>
+                                {% endfor %}
+                                <span class="slider-point">10</span>
+                            </div>
+                            <div class="slider-value">Rating: [[ genreScores[genre.id] || 0 ]]</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -346,57 +347,76 @@
     }
 
     /* Genres Grid */
-    .genres-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .genre-pref {
+    .genre-preferences-list {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
     }
 
-    .genre-pref label {
-        font-weight: 500;
-        font-size: 0.95rem;
+    .genre-pref-row {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.4rem 0;
+    }
+
+    .genre-pref-name {
+        font-weight: 600;
         color: var(--text-primary);
+        font-size: 0.95rem;
     }
 
-    .genre-slider {
-        width: 100%;
-        height: 6px;
-        border-radius: 3px;
-        background: var(--border-soft);
-        outline: none;
-        -webkit-appearance: none;
+    .genre-pref-slider {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
     }
 
-    .genre-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: #2d5aa3;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    .slider-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0;
     }
 
-    .genre-slider::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: #2d5aa3;
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .genre-value {
-        text-align: center;
+    .slider-point {
+        font-size: 0.75rem;
+        font-weight: 700;
         color: var(--text-secondary);
+        min-width: 1.2rem;
+        text-align: center;
+    }
+
+    .slider-dot {
+        width: 0.6rem;
+        height: 0.6rem;
+        padding: 0;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        border-radius: 50%;
+        cursor: pointer;
+        flex: 0 0 auto;
+        transition: all 0.15s ease;
+    }
+
+    .slider-dot.is-active {
+        background: var(--chip-active-bg);
+        border-color: var(--chip-active-bg);
+        width: 0.8rem;
+        height: 0.8rem;
+        box-shadow: 0 0 8px rgba(45, 90, 163, 0.4);
+    }
+
+    .slider-dot:hover {
+        background: var(--chip-border);
+        transform: translateY(-1px);
+    }
+
+    .slider-value {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    };
         font-size: 0.9rem;
         font-weight: 600;
     }

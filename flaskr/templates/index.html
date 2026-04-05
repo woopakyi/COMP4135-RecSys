@@ -5,11 +5,12 @@
     <section class="hero app-hero">
         <div class="container">
             <div class="hero-body px-0 py-6">
-                <div class="content has-text-centered">
-                    <h1 class="title is-2 mb-3">Movie Recommender</h1>
-                    <p class="subtitle is-5 has-text-grey-dark mb-0">This website recommends movies. To start, choose an algorithm and a user interface.</p>
-                </div>
-                <div class="box setup-panel mt-5">
+                <div class="box setup-panel mt-0">
+                    <div class="setup-header">
+                        <h1 class="title is-2 mb-2">Movie Recommender</h1>
+                        <p class="subtitle is-5 has-text-grey-dark mb-0">This website recommends movies. To start, choose an algorithm and a user interface.</p>
+                    </div>
+
                     <div class="setup-block">
                         <p class="setup-label">Algorithm:</p>
                         <div class="choice-row">
@@ -33,10 +34,15 @@
                             {% for genre in genres %}
                             <div class="genre-row">
                                 <div class="genre-name">{% if genre['name'] == '(no genres listed)' %}Other / no genres listed{% else %}{{ genre['name'] }}{% endif %}</div>
-                                <div class="node-bar">
-                                    {% for rate in range(0, 11) %}
-                                    <button type="button" class="node" :class="genreScores['{{ genre['id'] }}'] === {{ rate }} ? 'is-active' : ''" @click="genreScores['{{ genre['id'] }}'] = {{ rate }}">{{ rate }}</button>
-                                    {% endfor %}
+                                <div class="genre-slider">
+                                    <div class="slider-wrapper">
+                                        <span class="slider-point">0</span>
+                                        {% for rate in range(1, 10) %}
+                                        <button class="slider-dot" :class="genreScores['{{ genre['id'] }}'] === {{ rate }} ? 'is-active' : ''" @click="genreScores['{{ genre['id'] }}'] = {{ rate }}" :title="'Rating: ' + {{ rate }}"></button>
+                                        {% endfor %}
+                                        <span class="slider-point">10</span>
+                                    </div>
+                                    <div class="slider-value">Rating: [[ genreScores['{{ genre['id'] }}'] || 0 ]]</div>
                                 </div>
                             </div>
                             {% endfor %}
@@ -310,6 +316,13 @@
         backdrop-filter: blur(10px);
     }
 
+    .setup-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border-soft);
+        padding-bottom: 1.5rem;
+    }
+
     .setup-block {
         padding: 0.25rem 0;
     }
@@ -357,20 +370,74 @@
     }
 
     .genre-list {
-        display: grid;
-        gap: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
     }
 
     .genre-row {
         display: grid;
-        grid-template-columns: minmax(180px, 280px) 1fr;
+        grid-template-columns: 140px 1fr;
         gap: 1rem;
         align-items: center;
+        padding: 0.4rem 0;
     }
 
     .genre-name {
         font-weight: 600;
         color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    .genre-slider {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .slider-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0;
+    }
+
+    .slider-point {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        min-width: 1.2rem;
+        text-align: center;
+    }
+
+    .slider-dot {
+        width: 0.6rem;
+        height: 0.6rem;
+        padding: 0;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        border-radius: 50%;
+        cursor: pointer;
+        flex: 0 0 auto;
+        transition: all 0.15s ease;
+    }
+
+    .slider-dot.is-active {
+        background: var(--chip-active-bg);
+        border-color: var(--chip-active-bg);
+        width: 0.8rem;
+        height: 0.8rem;
+        box-shadow: 0 0 8px rgba(45, 90, 163, 0.4);
+    }
+
+    .slider-dot:hover {
+        background: var(--chip-border);
+        transform: translateY(-1px);
+    }
+
+    .slider-value {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
     }
 
     .node-bar {
@@ -432,6 +499,8 @@
         flex: 0 0 92px;
         border-radius: 14px;
         object-fit: cover;
+        height: auto;
+        aspect-ratio: 3 / 4;
     }
 
     .movie-copy {
@@ -453,6 +522,7 @@
     @media screen and (max-width: 768px) {
         .genre-row {
             grid-template-columns: 1fr;
+            gap: 0.5rem;
         }
 
         .movie-card {
@@ -463,6 +533,11 @@
             width: 100%;
             aspect-ratio: 3 / 4;
             flex-basis: auto;
+        }
+
+        .setup-panel {
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
         }
     }
 </style>

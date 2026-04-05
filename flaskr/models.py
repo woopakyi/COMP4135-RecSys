@@ -16,6 +16,7 @@ class User(db.Model):
     algorithm_preference = db.Column(db.String(20), default='algo1')  # algo1 or algo2
     ui_preference = db.Column(db.String(20), default='1')  # 1 (dark) or 2 (light)
     genre_preferences = db.Column(db.Text, default='{}')  # JSON string of {genre_id: score}
+    admin = db.Column(db.Boolean, default=False)  # Admin user flag
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
