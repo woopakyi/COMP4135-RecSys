@@ -1,5 +1,5 @@
 from flask import (
-    Blueprint, render_template, request
+    Blueprint, render_template, request, current_app, jsonify
 )
 from datetime import datetime, timezone
 
@@ -85,6 +85,33 @@ def feedback():
 @bp.route('/evaluation', methods=('GET',))
 def evaluation():
     return render_template('evaluation.html')
+
+
+@bp.route('/debug/db', methods=('GET',))
+def debug_database():
+    from .models import db, User, Movie, Rating, GenreScore, Feedback, Vote
+
+    def safe_count(model):
+        try:
+            return model.query.count()
+        except Exception:
+            return None
+
+    uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    backend = 'postgresql' if uri.startswith('postgresql') or uri.startswith('postgres://') else 'sqlite'
+
+    return jsonify({
+        'backend': backend,
+        'database_uri_prefix': uri.split('://', 1)[0] if '://' in uri else uri,
+        'counts': {
+            'users': safe_count(User),
+            'movies': safe_count(Movie),
+            'ratings': safe_count(Rating),
+            'genre_scores': safe_count(GenreScore),
+            'feedback': safe_count(Feedback),
+            'votes': safe_count(Vote),
+        }
+    })
 
 
 def getUserLikesBy(user_likes):

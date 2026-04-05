@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 
 from flask import Flask
 
@@ -38,6 +39,7 @@ def create_app(test_config=None):
     # Create tables on app startup
     with app.app_context():
         db.create_all()
+        seed_movies_from_csv(app)
 
     # Import and register functions
     from . import scrape
@@ -50,3 +52,26 @@ def create_app(test_config=None):
     app.register_blueprint(auth.bp)
 
     return app
+
+
+def seed_movies_from_csv(app):
+    from .models import Movie, db
+
+    if Movie.query.first() is not None:
+        return
+
+    csv_path = os.path.join(app.root_path, 'static', 'ml_data', 'movie_info.csv')
+    movies_df = pd.read_csv(csv_path)
+
+    movie_records = []
+    for _, row in movies_df.iterrows():
+        movie_records.append(Movie(
+            id=int(row['movieId']),
+            title=str(row['title']),
+            year=int(row['year']) if pd.notna(row['year']) else None,
+            genres=str(row['genres']),
+            image_url=str(row['cover_url']),
+        ))
+
+    db.session.add_all(movie_records)
+    db.session.commit()

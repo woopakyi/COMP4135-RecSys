@@ -90,7 +90,7 @@ def login():
             session['ui_variant'] = user.ui_variant
             
             flash(f'Welcome back, {username}!', 'success')
-            return redirect(url_for('main.home'))
+            return redirect(url_for('main.index'))
         else:
             flash('Invalid username or password', 'error')
             return render_template('auth/login.html')
@@ -104,7 +104,7 @@ def logout():
     username = session.get('username', 'User')
     session.clear()
     flash(f'Goodbye, {username}!', 'success')
-    return redirect(url_for('main.home'))
+    return redirect(url_for('main.index'))
 
 
 @bp.before_app_request
@@ -117,4 +117,4 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = User.query.get(user_id)
+        g.user = db.session.get(User, user_id)
