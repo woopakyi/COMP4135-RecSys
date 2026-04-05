@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
@@ -10,6 +11,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
     algorithm = db.Column(db.String(20), default='algo1')  # algo1 or algo2
     ui_variant = db.Column(db.String(20), default='default')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -18,6 +20,14 @@ class User(db.Model):
     ratings = db.relationship('Rating', backref='user', lazy=True, cascade='all, delete-orphan')
     feedback = db.relationship('Feedback', backref='user', lazy=True, cascade='all, delete-orphan')
     genre_scores = db.relationship('GenreScore', backref='user', lazy=True, cascade='all, delete-orphan')
+    
+    def set_password(self, password):
+        """Hash and set user password"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """Verify password hash"""
+        return check_password_hash(self.password_hash, password)
 
 
 class Movie(db.Model):

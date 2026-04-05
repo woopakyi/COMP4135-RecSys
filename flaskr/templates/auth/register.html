@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-shell">
+  <div class="card auth-card">
+    <h1 class="title is-3" style="text-align: center; margin-bottom: 2rem;">Create Account</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="notification is-{{ 'danger' if category == 'error' else 'success' }}" style="margin-bottom: 1rem;">
+            <button class="delete"></button>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <form method="post">
+      <div class="field">
+        <label class="label">Username</label>
+        <div class="control">
+          <input class="input" type="text" name="username" placeholder="Choose a username (3+ chars)" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Email</label>
+        <div class="control">
+          <input class="input" type="email" name="email" placeholder="Enter your email" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Password</label>
+        <div class="control">
+          <input class="input" type="password" name="password" placeholder="Minimum 6 characters" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Confirm Password</label>
+        <div class="control">
+          <input class="input" type="password" name="confirm_password" placeholder="Re-enter password" required>
+        </div>
+      </div>
+
+      <div class="field is-grouped" style="justify-content: center; gap: 1rem;">
+        <div class="control">
+          <button class="button is-success" type="submit">Create Account</button>
+        </div>
+        <div class="control">
+          <a class="button is-light" href="{{ url_for('auth.login') }}">Already have an account?</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .auth-card {
+    max-width: 400px;
+    margin: 3rem auto;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .notification .delete {
+    cursor: pointer;
+  }
+</style>
+{% endblock %}

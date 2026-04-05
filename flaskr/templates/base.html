@@ -17,7 +17,17 @@
             <a class="navbar-item" href="/evaluation">Evaluation</a>
         </div>
         <div class="app-navbar-action">
-            <button class="button is-link is-light" type="button">Login / Sign in</button>
+            {% if g.user %}
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span style="color: #1e293b; font-weight: 500;">{{ g.user.username }}</span>
+                    <a class="button is-light is-small" href="{{ url_for('auth.logout') }}">Logout</a>
+                </div>
+            {% else %}
+                <div style="display: flex; gap: 0.5rem;">
+                    <a class="button is-light" href="{{ url_for('auth.login') }}">Login</a>
+                    <a class="button is-primary" href="{{ url_for('auth.register') }}">Sign up</a>
+                </div>
+            {% endif %}
         </div>
     </div>
 </nav>
