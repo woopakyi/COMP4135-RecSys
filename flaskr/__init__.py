@@ -17,6 +17,9 @@ def create_app(test_config=None):
         SECRET_KEY=os.getenv('SECRET_KEY', 'dev'),
         SQLALCHEMY_DATABASE_URI=database_url or f"sqlite:///{os.path.join(app.instance_path, 'flaskr.sqlite')}",
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        GOOGLE_CLIENT_ID=os.getenv('GOOGLE_CLIENT_ID', ''),
+        GOOGLE_CLIENT_SECRET=os.getenv('GOOGLE_CLIENT_SECRET', ''),
+        GOOGLE_REDIRECT_URI=os.getenv('GOOGLE_REDIRECT_URI', ''),
     )
 
     if test_config is None:
@@ -40,6 +43,20 @@ def create_app(test_config=None):
     with app.app_context():
         db.create_all()
         seed_movies_from_csv(app)
+        try:
+            from sqlalchemy import text
+            db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS feedback_text TEXT"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(120)"))
+            # Keep user table compact: voter_name/voter_email live in feedback table.
+            if (app.config.get('SQLALCHEMY_DATABASE_URI') or '').startswith('postgresql://'):
+                db.session.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS full_name"))
+                db.session.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS contact_email"))
+            db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_feedback_type_submission ON feedback(feedback_type, submission_type)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_feedback_updated_at ON feedback(updated_at)"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # Check if schema is out of sync with PostgreSQL and fix it
         try:

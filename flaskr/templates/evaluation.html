@@ -1,115 +1,194 @@
 {% extends 'base.html' %}
 {% block title %}Evaluation - Movie Recommender{% endblock %}
 {% block content %}
-<section class="section">
+{% if g.user and g.user.admin %}<meta name="eval-admin" content="true">{% endif %}
+
+<section class="section" id="evaluation-app" v-cloak>
     <div class="container">
-        <div class="mb-5">
-            <h1 class="title is-3 mb-2">Evaluation</h1>
-            <p class="subtitle is-6 has-text-grey">Pie charts are visible even before feedback is collected.</p>
+        <div class="eval-head mb-5">
+            <h1 class="title is-3 eval-title">Evaluation</h1>
+            <p class="subtitle is-6 has-text-grey eval-subtitle">Chart data is sourced from feedback records in the database.</p>
+        </div>
+
+        <div class="chart-source-filter mb-4">
+            <p class="filter-label">Chart Source</p>
+            <div class="chip-group">
+                <button type="button" class="chip-btn" :class="{ 'is-active': sourceFilter === 'all' }" @click="setSourceFilter('all')">All</button>
+                <button type="button" class="chip-btn" :class="{ 'is-active': sourceFilter === 'logged' }" @click="setSourceFilter('logged')">Logged Users</button>
+                <button type="button" class="chip-btn" :class="{ 'is-active': sourceFilter === 'anonymous' }" @click="setSourceFilter('anonymous')">Anonymous</button>
+            </div>
         </div>
 
         <div class="columns is-multiline is-variable is-4">
-            <div class="column is-12-mobile is-6-desktop">
+            <div class="column is-12-mobile is-6-desktop" v-for="card in cards" :key="card.key">
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h2 class="title is-5 mb-1">Algorithm Evaluation based on UI 1</h2>
-                        <p class="is-size-7 has-text-grey">Logged user and anonymous votes</p>
+                        <h2 class="title is-5 mb-1">[[ card.title ]]</h2>
+                        <p class="is-size-7 has-text-grey">[[ card.description ]]</p>
                     </div>
-                    <div class="chart-wrap">
-                        <div class="pie-ring"></div>
-                        <div class="chart-center">0</div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="column is-12-mobile is-6-desktop">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h2 class="title is-5 mb-1">Algorithm Evaluation based on UI 2</h2>
-                        <p class="is-size-7 has-text-grey">Logged user and anonymous votes</p>
-                    </div>
                     <div class="chart-wrap">
-                        <div class="pie-ring"></div>
-                        <div class="chart-center">0</div>
+                        <div
+                            class="pie-ring"
+                            :class="{ 'is-na': !card.hasData }"
+                            :style="{ '--better-angle': card.betterAngle + 'deg' }"
+                        ></div>
+                        <div class="chart-center" :class="{ 'is-na': !card.hasData }">[[ card.centerText ]]</div>
                     </div>
-                </div>
-            </div>
 
-            <div class="column is-12-mobile is-6-desktop">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h2 class="title is-5 mb-1">UI Evaluation based on Algorithm 1</h2>
-                        <p class="is-size-7 has-text-grey">Logged user and anonymous votes</p>
-                    </div>
-                    <div class="chart-wrap">
-                        <div class="pie-ring"></div>
-                        <div class="chart-center">0</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="column is-12-mobile is-6-desktop">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h2 class="title is-5 mb-1">UI Evaluation based on Algorithm 2</h2>
-                        <p class="is-size-7 has-text-grey">Logged user and anonymous votes</p>
-                    </div>
-                    <div class="chart-wrap">
-                        <div class="pie-ring"></div>
-                        <div class="chart-center">0</div>
+                    <div class="chart-legend" v-if="card.hasData">
+                        <span class="legend-pill"><span class="legend-dot better"></span>[[ card.leftLabel ]]: [[ card.better ]]</span>
+                        <span class="legend-pill"><span class="legend-dot worse"></span>[[ card.rightLabel ]]: [[ card.worse ]]</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="box mt-5 eval-filters">
-            <div class="level mb-3">
-                <div class="level-left">
-                    <div>
-                        <h2 class="title is-5 mb-1">Vote Details</h2>
-                        <p class="is-size-7 has-text-grey">Admin table will show here once feedback records exist.</p>
+        <div class="box mt-5 eval-filters" v-if="isAdmin">
+            <div class="table-top">
+                <div>
+                    <h2 class="title is-5 mb-1">Vote Details</h2>
+                    <p class="is-size-7 has-text-grey">Admin-only records from feedback submissions.</p>
+                </div>
+            </div>
+
+            <div class="table-filters">
+                <div class="filter-row">
+                    <span class="filter-name">Source</span>
+                    <div class="chip-group">
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableSource === 'all' }" @click="setTableSource('all')">All</button>
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableSource === 'logged' }" @click="setTableSource('logged')">Logged</button>
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableSource === 'anonymous' }" @click="setTableSource('anonymous')">Anonymous</button>
                     </div>
                 </div>
-                <div class="level-right">
-                    <div class="buttons has-addons is-flex-wrap-wrap">
-                        <button class="button is-light is-active" type="button">All</button>
-                        <button class="button is-light" type="button">Logged</button>
-                        <button class="button is-light" type="button">Anonymous</button>
-                        <button class="button is-light" type="button">UI 1</button>
-                        <button class="button is-light" type="button">UI 2</button>
+                <div class="filter-row">
+                    <span class="filter-name">Type</span>
+                    <div class="chip-group">
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableType === 'all' }" @click="setTableType('all')">All</button>
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableType === 'algo_ui1' }" @click="setTableType('algo_ui1')">Algo on UI 1</button>
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableType === 'algo_ui2' }" @click="setTableType('algo_ui2')">Algo on UI 2</button>
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableType === 'ui_algo1' }" @click="setTableType('ui_algo1')">UI on Algo 1</button>
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableType === 'ui_algo2' }" @click="setTableType('ui_algo2')">UI on Algo 2</button>
                     </div>
                 </div>
             </div>
 
             <div class="table-wrap">
-                <table class="table is-fullwidth is-striped is-hoverable">
+                <table class="table is-fullwidth eval-table">
                     <thead>
                         <tr>
+                            <th>ID</th>
+                            <th>User ID</th>
                             <th>Type</th>
                             <th>Source</th>
                             <th>Vote</th>
+                            <th>Voter Name</th>
+                            <th>Voter Email</th>
+                            <th>Feedback Text</th>
+                            <th>Consent</th>
+                            <th>Created</th>
                             <th>Time</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td colspan="4" class="has-text-centered has-text-grey py-6">No feedback records yet.</td>
+                        <tr v-for="row in votes" :key="row.id">
+                            <td>[[ row.id ]]</td>
+                            <td>[[ row.user_id || 'NULL' ]]</td>
+                            <td>[[ renderFeedbackType(row.feedback_type) ]]</td>
+                            <td>[[ row.submission_type ]]</td>
+                            <td>[[ renderVoteChoice(row.vote_choice) ]]</td>
+                            <td>[[ row.voter_name || 'NULL' ]]</td>
+                            <td>[[ row.voter_email || 'NULL' ]]</td>
+                            <td>[[ row.feedback_text || 'NULL' ]]</td>
+                            <td>[[ row.consent_agreed ? 'true' : 'false' ]]</td>
+                            <td>[[ formatTime(row.created_at) ]]</td>
+                            <td>[[ formatTime(row.updated_at || row.created_at) ]]</td>
+                        </tr>
+                        <tr v-if="votes.length === 0">
+                            <td colspan="11" class="has-text-centered has-text-grey py-6">No feedback records found for the current filter.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <div class="box mt-5 eval-filters" v-else>
+            <h2 class="title is-5 mb-1">Vote Details</h2>
+            <p class="is-size-7 has-text-grey">Only logged-in admin users can view this table.</p>
+        </div>
     </div>
 </section>
 
 <style>
+    .eval-head {
+        margin-bottom: 2rem;
+    }
+
+    .eval-title {
+        margin-bottom: 0.85rem !important;
+        line-height: 1.1;
+    }
+
+    .eval-subtitle {
+        margin-top: 0 !important;
+        line-height: 1.55;
+    }
+
+    .chart-source-filter {
+        border: 1px solid var(--card-border);
+        background: var(--card-bg);
+        border-radius: 14px;
+        padding: 0.9rem 1rem;
+    }
+
+    .filter-label {
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 0.55rem;
+        font-weight: 700;
+    }
+
+    .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+    }
+
+    .chip-btn {
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        color: var(--chip-text);
+        border-radius: 999px;
+        padding: 0.4rem 0.9rem;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .chip-btn:hover {
+        transform: translateY(-1px);
+        border-color: #2d5aa3;
+    }
+
+    .chip-btn.is-active {
+        background: var(--chip-active-bg);
+        color: var(--chip-active-text);
+        border-color: var(--chip-active-bg);
+    }
+
     .chart-card {
         border-radius: 18px;
-        border: 1px solid #eceef5;
-        background: #fff;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+        border: 1px solid var(--card-border);
+        background: var(--card-bg);
+        box-shadow: var(--card-shadow);
         padding: 1.1rem;
         height: 100%;
+        max-width: 460px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .chart-header {
@@ -119,8 +198,8 @@
 
     .chart-wrap {
         position: relative;
-        width: 220px;
-        height: 220px;
+        width: 190px;
+        height: 190px;
         margin: 0 auto;
         display: grid;
         place-items: center;
@@ -130,33 +209,278 @@
         width: 100%;
         height: 100%;
         border-radius: 50%;
-        background: conic-gradient(#111827 0deg 0deg, #dbe2ea 0deg 360deg);
+        background: conic-gradient(#1d4ed8 0deg var(--better-angle), #ea580c var(--better-angle) 360deg);
         -webkit-mask: radial-gradient(circle at center, transparent 58%, #000 59%);
-                mask: radial-gradient(circle at center, transparent 58%, #000 59%);
+        mask: radial-gradient(circle at center, transparent 58%, #000 59%);
+    }
+
+    .pie-ring.is-na {
+        background: conic-gradient(var(--border-soft) 0deg 360deg);
     }
 
     .chart-center {
         position: absolute;
-        width: 92px;
-        height: 92px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
-        background: #fff;
+        background: var(--bg-elevated);
         display: grid;
         place-items: center;
-        font-size: 2rem;
+        font-size: 1.45rem;
         font-weight: 800;
-        color: #0f172a;
-        box-shadow: inset 0 0 0 1px #eceef5;
+        color: var(--text-primary);
+        box-shadow: inset 0 0 0 1px var(--border-soft);
+    }
+
+    .chart-center.is-na {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        font-weight: 700;
+    }
+
+    .chart-legend {
+        margin-top: 0.9rem;
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .legend-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+        border: 1px solid var(--border-soft);
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+    }
+
+    .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .legend-dot.better {
+        background: #1d4ed8;
+    }
+
+    .legend-dot.worse {
+        background: #ea580c;
     }
 
     .eval-filters {
         border-radius: 18px;
-        border: 1px solid #eceef5;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+        border: 1px solid var(--card-border);
+        box-shadow: var(--card-shadow);
+        background: var(--card-bg);
+    }
+
+    .table-top {
+        margin-bottom: 1rem;
+    }
+
+    .table-filters {
+        display: grid;
+        gap: 0.9rem;
+        margin-bottom: 1rem;
+        padding: 0;
+    }
+
+    .filter-row {
+        display: grid;
+        grid-template-columns: 75px 1fr;
+        gap: 0.8rem;
+        align-items: center;
+    }
+
+    .filter-name {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
     }
 
     .table-wrap {
         overflow-x: auto;
     }
+
+    .eval-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        background: transparent;
+    }
+
+    .eval-table th {
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-soft);
+        background: var(--bg-elevated);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .eval-table td {
+        border-bottom: 1px solid var(--border-soft);
+        color: var(--text-primary);
+        background: transparent;
+    }
+
+    .eval-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    @media (max-width: 768px) {
+        .chart-wrap {
+            width: 170px;
+            height: 170px;
+        }
+
+        .chart-center {
+            width: 72px;
+            height: 72px;
+            font-size: 1.25rem;
+        }
+
+        .filter-row {
+            grid-template-columns: 1fr;
+            gap: 0.45rem;
+        }
+    }
 </style>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script>
+const { createApp } = Vue;
+
+const evalApp = createApp({
+    data() {
+        return {
+            sourceFilter: 'all',
+            tableSource: 'all',
+            tableType: 'all',
+            summary: {},
+            votes: [],
+            isAdmin: !!document.querySelector('meta[name="eval-admin"]')
+        };
+    },
+    computed: {
+        cards() {
+            const defs = [
+                {
+                    key: 'algo_ui1',
+                    title: 'Algorithm Evaluation based on UI 1',
+                    description: 'Logged user and anonymous votes',
+                    leftLabel: 'Factorization Machine',
+                    rightLabel: 'Self-Attentive Sequential Recommendation'
+                },
+                {
+                    key: 'algo_ui2',
+                    title: 'Algorithm Evaluation based on UI 2',
+                    description: 'Logged user and anonymous votes',
+                    leftLabel: 'Factorization Machine',
+                    rightLabel: 'Self-Attentive Sequential Recommendation'
+                },
+                {
+                    key: 'ui_algo1',
+                    title: 'UI Evaluation based on Algorithm 1',
+                    description: 'Logged user and anonymous votes',
+                    leftLabel: 'UI 1',
+                    rightLabel: 'UI 2'
+                },
+                {
+                    key: 'ui_algo2',
+                    title: 'UI Evaluation based on Algorithm 2',
+                    description: 'Logged user and anonymous votes',
+                    leftLabel: 'UI 1',
+                    rightLabel: 'UI 2'
+                }
+            ];
+
+            return defs.map((def) => {
+                const rec = this.summary[def.key] || { better: 0, worse: 0, total: 0, has_data: false };
+                return {
+                    ...def,
+                    better: rec.better || 0,
+                    worse: rec.worse || 0,
+                    total: rec.total || 0,
+                    hasData: !!rec.has_data,
+                    betterAngle: rec.total ? (rec.better / rec.total) * 360 : 0,
+                    centerText: rec.total ? String(rec.total) : 'N/A'
+                };
+            });
+        }
+    },
+    mounted() {
+        this.loadSummary();
+        if (this.isAdmin) {
+            this.loadVotes();
+        }
+    },
+    methods: {
+        async loadSummary() {
+            const res = await fetch(`/api/evaluation/summary?source=${encodeURIComponent(this.sourceFilter)}`);
+            if (!res.ok) {
+                return;
+            }
+            const data = await res.json();
+            this.summary = data.summary || {};
+        },
+        async loadVotes() {
+            const params = new URLSearchParams();
+            params.set('source', this.tableSource);
+            params.set('feedback_type', this.tableType);
+            const res = await fetch('/api/evaluation/votes?' + params.toString());
+            if (!res.ok) {
+                this.votes = [];
+                return;
+            }
+            const data = await res.json();
+            this.votes = data.votes || [];
+        },
+        setSourceFilter(value) {
+            this.sourceFilter = value;
+            this.loadSummary();
+        },
+        setTableSource(value) {
+            this.tableSource = value;
+            this.loadVotes();
+        },
+        setTableType(value) {
+            this.tableType = value;
+            this.loadVotes();
+        },
+        renderFeedbackType(type) {
+            const names = {
+                algo_ui1: 'Algorithm on UI 1',
+                algo_ui2: 'Algorithm on UI 2',
+                ui_algo1: 'UI on Algorithm 1',
+                ui_algo2: 'UI on Algorithm 2'
+            };
+            return names[type] || type;
+        },
+        renderVoteChoice(voteChoice) {
+            const names = {
+                algo1: 'Factorization Machine',
+                algo2: 'Self-Attentive Sequential Recommendation',
+                ui1: 'UI 1 (Dark)',
+                ui2: 'UI 2 (Light)'
+            };
+            return names[voteChoice] || voteChoice;
+        },
+        formatTime(isoText) {
+            if (!isoText) return 'N/A';
+            const dt = new Date(isoText);
+            if (Number.isNaN(dt.getTime())) return 'N/A';
+            return dt.toLocaleString();
+        }
+    }
+});
+
+evalApp.config.compilerOptions.delimiters = ['[[', ']]'];
+evalApp.mount('#evaluation-app');
+</script>
 {% endblock %}

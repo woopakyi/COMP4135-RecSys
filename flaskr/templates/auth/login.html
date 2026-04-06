@@ -60,6 +60,15 @@
         </div>
       </div>
 
+      <div class="field mt-3">
+        <div class="control">
+          <a class="button is-fullwidth" href="{{ url_for('auth.google_login') }}" style="border: 1px solid var(--chip-border);">
+            <span class="icon"><i class="fa fa-google"></i></span>
+            <span>Continue with Google</span>
+          </a>
+        </div>
+      </div>
+
       <div class="has-text-centered mt-3">
         <a href="{{ url_for('auth.register') }}">Create an account</a>
       </div>

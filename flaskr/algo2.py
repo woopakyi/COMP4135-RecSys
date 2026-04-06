@@ -9,7 +9,7 @@ from .tools.data_tool import ratesFromUser
 
 def getRecommendationBy(user_rates, movies_df, rates_df):
     """
-    Template algorithm file for Algorithm 2 developer.
+    Template algorithm file for Algorithm 2 developing(SASRec).
     Keep this function signature stable for integration in main.py.
     """
     results = []

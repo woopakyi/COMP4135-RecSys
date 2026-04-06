@@ -9,7 +9,7 @@ from .tools.data_tool import ratesFromUser
 
 def getRecommendationBy(user_rates, movies_df, rates_df):
     """
-    Template algorithm file for Algorithm 1 developer.
+    Template algorithm file for Algorithm 1 developing(FM).
     Keep this function signature stable for integration in main.py.
     """
     results = []

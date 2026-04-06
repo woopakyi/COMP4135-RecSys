@@ -18,6 +18,12 @@
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
             -webkit-font-smoothing: antialiased;
+            background: #0b1220;
+            color: #e2e8f0;
+        }
+
+        [v-cloak] {
+            display: none;
         }
 
         /* Apply theme immediately before page renders */
@@ -99,20 +105,17 @@
 </script>
 
 {% set active_ui = request.cookies.get('user_ui', '1') %}
-<body class="app-body {% if active_ui == '2' %}ui-light{% else %}ui-dark{% endif %}">
+<body class="app-body {% if active_ui == '2' %}ui-light{% else %}ui-dark{% endif %}" style="opacity: 1;">
 <nav class="navbar app-navbar" role="navigation" aria-label="main navigation">
     <div class="container is-fluid" style="padding: 0.8rem 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem;">
             <!-- Left: Brand and Links -->
-            <div class="app-navbar-left" style="display: flex; align-items: center; gap: 0;">
-                <a href="/" class="navbar-item" style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary); padding: 0 1rem;">
-                    🎬
-                </a>
-                <div class="app-navbar-links" style="display: flex; align-items: center; gap: 0; margin-left: 1rem;">
+            <div class="app-navbar-left" style="display: flex; align-items: center; gap: 1rem;">
+                <div class="app-navbar-links" style="display: flex; align-items: center; gap: 0;">
                     <a class="navbar-item" href="/" style="padding: 0.45rem 0.7rem; border-radius: 10px; font-weight: 500; color: var(--text-primary);">Home</a>
-                    <a class="navbar-item" href="/evaluation" style="padding: 0.45rem 0.7rem; border-radius: 10px; font-weight: 500; color: var(--text-primary);">Evaluation</a>
                     <a class="navbar-item" href="/profile" style="padding: 0.45rem 0.7rem; border-radius: 10px; font-weight: 500; color: var(--text-primary);">Profile</a>
                     <a class="navbar-item" href="/feedback" style="padding: 0.45rem 0.7rem; border-radius: 10px; font-weight: 500; color: var(--text-primary);">Feedback</a>
+                    <a class="navbar-item" href="/evaluation" style="padding: 0.45rem 0.7rem; border-radius: 10px; font-weight: 500; color: var(--text-primary);">Evaluation</a>
                 </div>
             </div>
 
@@ -126,13 +129,9 @@
                        onmouseout="this.style.transform='none'">Logout</a>
                 {% else %}
                     <a class="button is-small" href="{{ url_for('auth.login') }}" 
-                       style="padding: 0.45rem 0.9rem; border-radius: 10px; background: var(--chip-bg); color: var(--text-primary); border: 1px solid var(--chip-border); font-weight: 500; transition: all 0.2s ease;"
-                       onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--chip-active-bg)'"
-                       onmouseout="this.style.transform='none'">Login</a>
-                    <a class="button is-small" href="{{ url_for('auth.register') }}" 
                        style="padding: 0.45rem 0.9rem; border-radius: 10px; background: #2d5aa3; color: #ffffff; border: 1px solid #2d5aa3; font-weight: 500; transition: all 0.2s ease;"
                        onmouseover="this.style.transform='translateY(-1px)'; this.style.opacity='0.9'"
-                       onmouseout="this.style.transform='none'; this.style.opacity='1'">Sign up</a>
+                       onmouseout="this.style.transform='none'; this.style.opacity='1'">Sign In</a>
                 {% endif %}
             </div>
         </div>
@@ -155,6 +154,86 @@
         </div>
     </div>
 </footer>
+
+{% if g.user %}
+<script>
+    (function () {
+        try {
+            const userId = '{{ g.user.id }}';
+            const markerKey = 'rec_migrated_user_' + userId;
+            if (localStorage.getItem(markerKey) === '1') {
+                return;
+            }
+
+            const rawRatings = localStorage.getItem('rec_user_ratings');
+            const rawGenres = localStorage.getItem('rec_genre_prefs');
+            const algorithm = localStorage.getItem('rec_algorithm');
+            const uiMode = localStorage.getItem('rec_ui_mode');
+
+            const hasRatings = !!rawRatings && rawRatings !== '{}';
+            const hasGenres = !!rawGenres && rawGenres !== '{}';
+            const hasPrefs = !!algorithm || !!uiMode;
+            if (!hasRatings && !hasGenres && !hasPrefs) {
+                localStorage.setItem(markerKey, '1');
+                return;
+            }
+
+            let ratingsObject = {};
+            let genresObject = {};
+            try {
+                ratingsObject = rawRatings ? JSON.parse(rawRatings) : {};
+            } catch (_err) {
+                ratingsObject = {};
+            }
+            try {
+                genresObject = rawGenres ? JSON.parse(rawGenres) : {};
+            } catch (_err) {
+                genresObject = {};
+            }
+
+            const ratings = Object.keys(ratingsObject).map((movieId) => ({
+                movieId: parseInt(movieId, 10),
+                rating: ratingsObject[movieId]?.rating,
+                timestamp: ratingsObject[movieId]?.timestamp
+            })).filter((item) => !Number.isNaN(item.movieId) && item.rating != null);
+
+            const genrePreferences = {};
+            Object.keys(genresObject).forEach((genreId) => {
+                const parsed = parseInt(genreId, 10);
+                if (!Number.isNaN(parsed) && genresObject[genreId] && genresObject[genreId].score != null) {
+                    genrePreferences[String(parsed)] = genresObject[genreId].score;
+                }
+            });
+
+            fetch('/api/migrate-ratings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ratings,
+                    genrePreferences,
+                    algorithm,
+                    uiMode
+                }),
+                keepalive: true
+            }).then((resp) => {
+                if (!resp.ok) {
+                    return;
+                }
+                localStorage.removeItem('rec_user_ratings');
+                localStorage.removeItem('rec_genre_prefs');
+                localStorage.removeItem('rec_algorithm');
+                localStorage.removeItem('rec_ui_mode');
+                localStorage.removeItem('rec_selected_genres');
+                localStorage.setItem(markerKey, '1');
+            }).catch(() => {
+                // Ignore migration errors to avoid interrupting page use.
+            });
+        } catch (_err) {
+            // Ignore migration errors to avoid interrupting page use.
+        }
+    })();
+</script>
+{% endif %}
 
 <style>
     /* Layout and structure */

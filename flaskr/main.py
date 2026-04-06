@@ -1,5 +1,5 @@
 from flask import (
-    Blueprint, render_template, request, current_app, jsonify
+    Blueprint, render_template, request, current_app, jsonify, g
 )
 from datetime import datetime, timezone
 
@@ -14,23 +14,45 @@ bp = Blueprint('main', __name__, url_prefix='/')
 
 movies, genres, rates = loadData()
 
-# These flags are intentionally controlled here for collaboration with algorithm developers.
-algo1 = False
-algo2 = False
+# set the boolean from False to True if you have finished developing the corresponding algorithm.
+algo1 = False #FM
+algo2 = False #SASRec
 
 
 @bp.route('/', methods=('GET', 'POST'))
 def index():
     default_genres = genres.to_dict('records')
-    selected_algorithm = request.cookies.get('user_algorithm', '')
-    selected_ui = request.cookies.get('user_ui', '')
-    setup_started = request.cookies.get('user_started', '') == '1'
-    setup_complete = bool(selected_algorithm and selected_ui and setup_started)
+    if g.user:
+        selected_algorithm = '1' if g.user.algorithm_preference == 'algo1' else '2'
+        selected_ui = g.user.ui_preference or '1'
+        setup_started = request.cookies.get('user_started', '') == '1'
+        setup_complete = bool(setup_started)
 
-    user_genre_scores = parse_genre_scores(request.cookies.get('user_genre_scores', ''))
-    user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
+        raw_scores = g.user.get_genre_preferences()
+        user_genre_scores = {}
+        for key, value in raw_scores.items():
+            try:
+                user_genre_scores[int(key)] = int(float(value))
+            except (TypeError, ValueError):
+                continue
+        user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
 
-    user_rates = parse_cookie_list(request.cookies.get('user_rates'))
+        from .models import Rating
+        db_ratings = Rating.query.filter_by(user_id=g.user.id).all()
+        user_rates = []
+        for row in db_ratings:
+            ts = int(row.timestamp.timestamp()) if row.timestamp else int(datetime.now(timezone.utc).timestamp())
+            user_rates.append(f'611|{row.movie_id}|{int(round(row.rating))}|{ts}')
+    else:
+        selected_algorithm = request.cookies.get('user_algorithm', '')
+        selected_ui = request.cookies.get('user_ui', '')
+        setup_started = request.cookies.get('user_started', '') == '1'
+        setup_complete = bool(selected_algorithm and selected_ui and setup_started)
+
+        user_genre_scores = parse_genre_scores(request.cookies.get('user_genre_scores', ''))
+        user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
+
+        user_rates = parse_cookie_list(request.cookies.get('user_rates'))
     liked_movie_ids = get_liked_movie_ids(user_rates)
 
     default_genres_movies = []

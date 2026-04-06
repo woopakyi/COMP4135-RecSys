@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block title %}Home - Movie Recommender{% endblock %}
 {% block content %}
-<div id="app">
-    <section class="hero app-hero">
-        <div class="container">
+<div id="app" v-cloak data-logged-in="{{ 'true' if g.user else 'false' }}">
+    <section class="hero app-hero" v-if="!setupComplete">
+        <div class="container is-fluid hero-container">
             <div class="hero-body px-0 py-6">
                 <div class="box setup-panel mt-0">
                     <div class="setup-header">
@@ -13,17 +13,33 @@
 
                     <div class="setup-block">
                         <p class="setup-label">Algorithm:</p>
-                        <div class="choice-row">
-                            <button class="choice-pill" :class="selectedAlgorithm === '1' ? 'is-active' : ''" @click="selectedAlgorithm = '1'">Algo 1</button>
-                            <button class="choice-pill" :class="selectedAlgorithm === '2' ? 'is-active' : ''" @click="selectedAlgorithm = '2'">Algo 2</button>
+                        <div class="choice-grid setup-choice-grid">
+                            <button type="button" class="choice-card" :class="selectedAlgorithm === '1' ? 'is-active' : ''" @click="selectAlgorithm('1')">
+                                <span class="choice-icon">🧠</span>
+                                <span class="choice-title">Algo 1</span>
+                                <span class="choice-desc">Factorization Machine</span>
+                            </button>
+                            <button type="button" class="choice-card" :class="selectedAlgorithm === '2' ? 'is-active' : ''" @click="selectAlgorithm('2')">
+                                <span class="choice-icon">🎯</span>
+                                <span class="choice-title">Algo 2</span>
+                                <span class="choice-desc">Self-Attentive Sequential Recommendation</span>
+                            </button>
                         </div>
                     </div>
 
                     <div class="setup-block mt-5">
                         <p class="setup-label">User Interface:</p>
-                        <div class="choice-row">
-                            <button class="choice-pill" :class="selectedUi === '1' ? 'is-active' : ''" @click="selectUi('1')">UI 1 (Dark)</button>
-                            <button class="choice-pill" :class="selectedUi === '2' ? 'is-active' : ''" @click="selectUi('2')">UI 2 (Light)</button>
+                        <div class="choice-grid setup-choice-grid">
+                            <button type="button" class="choice-card" :class="selectedUi === '1' ? 'is-active' : ''" @click="selectUi('1')">
+                                <span class="choice-icon">🌙</span>
+                                <span class="choice-title">UI 1</span>
+                                <span class="choice-desc">Dark mode</span>
+                            </button>
+                            <button type="button" class="choice-card" :class="selectedUi === '2' ? 'is-active' : ''" @click="selectUi('2')">
+                                <span class="choice-icon">☀️</span>
+                                <span class="choice-title">UI 2</span>
+                                <span class="choice-desc">Light mode</span>
+                            </button>
                         </div>
                     </div>
 
@@ -33,16 +49,19 @@
                         <div class="genre-list">
                             {% for genre in genres %}
                             <div class="genre-row">
-                                <div class="genre-name">{% if genre['name'] == '(no genres listed)' %}Other / no genres listed{% else %}{{ genre['name'] }}{% endif %}</div>
-                                <div class="genre-slider">
-                                    <div class="slider-wrapper">
-                                        <span class="slider-point">0</span>
-                                        {% for rate in range(1, 10) %}
-                                        <button class="slider-dot" :class="genreScores['{{ genre['id'] }}'] === {{ rate }} ? 'is-active' : ''" @click="genreScores['{{ genre['id'] }}'] = {{ rate }}" :title="'Rating: ' + {{ rate }}"></button>
-                                        {% endfor %}
-                                        <span class="slider-point">10</span>
-                                    </div>
-                                    <div class="slider-value">Rating: [[ genreScores['{{ genre['id'] }}'] || 0 ]]</div>
+                                <div class="genre-name">{% if genre['name'] == '(no genres listed)' %}(no genres listed){% else %}{{ genre['name'] }}{% endif %}</div>
+                                <div class="genre-slider-wrapper">
+                                    <span class="slider-label">0</span>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="10" 
+                                        v-model.number="genreScores['{{ genre['id'] }}']"
+                                        @change="saveGenrePreferences()"
+                                        class="line-slider"
+                                    />
+                                    <span class="slider-label">10</span>
+                                    <span class="slider-value">[[ genreScores['{{ genre['id'] }}'] || 0 ]]</span>
                                 </div>
                             </div>
                             {% endfor %}
@@ -57,7 +76,7 @@
         </div>
     </section>
 
-    <section class="section pt-4">
+    <section class="section pt-4" id="original-movies-section" ref="originalMoviesSection">
         <div class="container is-fluid">
             <template v-if="setupComplete">
                 <div class="movie-section">
@@ -65,7 +84,7 @@
                         <h2 class="title is-4 mb-1">Original Movies</h2>
                         <p class="has-text-grey">Rate the movies below from 0 to 10.</p>
                     </div>
-                    <div class="movie-stack">
+                    <div class="movie-stack original-movie-grid">
                         {% for movie in default_genres_movies %}
                         <div class="movie-card">
                             <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
@@ -77,7 +96,7 @@
                                 <p class="is-size-7 has-text-link mb-2">{{ movie['rated_time_ago'] }}</p>
                                 {% endif %}
                                 <div class="node-bar small">
-                                    {% for rate in range(0, 11) %}
+                                    {% for rate in range(1, 11) %}
                                     <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
                                     {% endfor %}
                                 </div>
@@ -96,15 +115,17 @@
                     </div>
                     <div class="movie-stack">
                         {% for movie in recommendations %}
-                        <div class="movie-card compact">
+                        <div class="movie-card">
+                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
+                                <p class="is-size-7 mb-1">{{ movie['release_date'] }}</p>
                                 <p class="is-size-7 mb-1">{{ movie['genres'] | join(', ') }}</p>
                                 {% if movie['rated_time_ago'] %}
                                 <p class="is-size-7 has-text-link mb-2">{{ movie['rated_time_ago'] }}</p>
                                 {% endif %}
                                 <div class="node-bar small">
-                                    {% for rate in range(0, 11) %}
+                                    {% for rate in range(1, 11) %}
                                     <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
                                     {% endfor %}
                                 </div>
@@ -123,15 +144,17 @@
                     </div>
                     <div class="movie-stack">
                         {% for movie in likes_similars %}
-                        <div class="movie-card compact">
+                        <div class="movie-card">
+                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
+                                <p class="is-size-7 mb-1">{{ movie['release_date'] }}</p>
                                 <p class="is-size-7 mb-1">{{ movie['genres'] | join(', ') }}</p>
                                 {% if movie['rated_time_ago'] %}
                                 <p class="is-size-7 has-text-link mb-2">{{ movie['rated_time_ago'] }}</p>
                                 {% endif %}
                                 <div class="node-bar small">
-                                    {% for rate in range(0, 11) %}
+                                    {% for rate in range(1, 11) %}
                                     <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
                                     {% endfor %}
                                 </div>
@@ -150,15 +173,17 @@
                     </div>
                     <div class="movie-stack">
                         {% for movie in likes %}
-                        <div class="movie-card compact">
+                        <div class="movie-card">
+                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
+                                <p class="is-size-7 mb-1">{{ movie['release_date'] }}</p>
                                 <p class="is-size-7 mb-1">{{ movie['genres'] | join(', ') }}</p>
                                 {% if movie['rated_time_ago'] %}
                                 <p class="is-size-7 has-text-link mb-2">{{ movie['rated_time_ago'] }}</p>
                                 {% endif %}
                                 <div class="node-bar small">
-                                    {% for rate in range(0, 11) %}
+                                    {% for rate in range(1, 11) %}
                                     <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
                                     {% endfor %}
                                 </div>
@@ -182,14 +207,17 @@
 </div>
 
 <script type="module">
-    import {createApp, ref} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+    import {createApp, ref, onMounted} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
 
     const app = createApp({
         setup() {
+            const rootElement = document.getElementById('app')
+            const isLoggedIn = ref(rootElement?.dataset.loggedIn === 'true')
             const selectedAlgorithm = ref('{{ selected_algorithm }}')
             const selectedUi = ref('{{ selected_ui }}' || '1')
             const setupComplete = ref({{ 'true' if setup_complete else 'false' }})
             const userRates = ref({{ user_rates | tojson }})
+            const originalMoviesSection = ref(null)
             const genreScores = ref({
                 {% for genre in genres %}
                 '{{ genre['id'] }}': {{ user_genre_scores.get(genre['id'], 0) }},
@@ -204,6 +232,147 @@
                 document.cookie = name + '=' + value + '; path=/'
             }
 
+            function readCookie(name) {
+                const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+                return match ? decodeURIComponent(match[2]) : ''
+            }
+
+            function saveAlgorithmToLocalStorage(value) {
+                try {
+                    localStorage.setItem('rec_algorithm', value === '1' ? 'algo1' : 'algo2')
+                } catch (_err) {
+                    // Ignore storage errors
+                }
+            }
+
+            function saveUiToLocalStorage(value) {
+                try {
+                    localStorage.setItem('rec_ui_mode', value)
+                } catch (_err) {
+                    // Ignore storage errors
+                }
+            }
+
+            function saveGenresToLocalStorage() {
+                try {
+                    const payload = {}
+                    Object.keys(genreScores.value).forEach((key) => {
+                        payload[String(key)] = {
+                            score: Number(genreScores.value[key] || 0),
+                            timestamp: new Date().toISOString()
+                        }
+                    })
+                    localStorage.setItem('rec_genre_prefs', JSON.stringify(payload))
+                } catch (_err) {
+                    // Ignore storage errors
+                }
+            }
+
+            function saveRatingsToLocalStorage() {
+                try {
+                    const payload = {}
+                    userRates.value.forEach((record) => {
+                        const parts = record.split('|')
+                        if (parts.length < 3) {
+                            return
+                        }
+                        const movieId = parseInt(parts[1], 10)
+                        const rating = parseInt(parts[2], 10)
+                        const timestamp = parts[3] ? Number(parts[3]) : Math.floor(Date.now() / 1000)
+                        if (Number.isNaN(movieId) || Number.isNaN(rating)) {
+                            return
+                        }
+                        payload[String(movieId)] = {
+                            rating,
+                            timestamp: new Date(timestamp * 1000).toISOString()
+                        }
+                    })
+                    localStorage.setItem('rec_user_ratings', JSON.stringify(payload))
+                } catch (_err) {
+                    // Ignore storage errors
+                }
+            }
+
+            function hydrateFromLocalStorage() {
+                try {
+                    if (!readCookie('user_algorithm')) {
+                        const storedAlgorithm = localStorage.getItem('rec_algorithm')
+                        if (storedAlgorithm === 'algo1') {
+                            selectedAlgorithm.value = '1'
+                            writeCookie('user_algorithm', '1')
+                        }
+                        if (storedAlgorithm === 'algo2') {
+                            selectedAlgorithm.value = '2'
+                            writeCookie('user_algorithm', '2')
+                        }
+                    }
+
+                    if (!readCookie('user_ui')) {
+                        const storedUi = localStorage.getItem('rec_ui_mode')
+                        if (storedUi === '1' || storedUi === '2') {
+                            selectedUi.value = storedUi
+                            writeCookie('user_ui', storedUi)
+                        }
+                    }
+
+                    const rawGenres = localStorage.getItem('rec_genre_prefs')
+                    if (rawGenres && !readCookie('user_genre_scores')) {
+                        const parsed = JSON.parse(rawGenres)
+                        const scoreRecords = []
+                        Object.keys(parsed).forEach((key) => {
+                            const value = Number(parsed[key]?.score || 0)
+                            if (!Number.isNaN(value)) {
+                                genreScores.value[key] = value
+                                scoreRecords.push(key + ':' + value)
+                            }
+                        })
+                        if (scoreRecords.length) {
+                            writeCookie('user_genre_scores', scoreRecords.join(','))
+                        }
+                    }
+                } catch (_err) {
+                    // Ignore storage errors
+                }
+            }
+
+            function saveGenrePreferences() {
+                const scoreRecords = []
+                Object.keys(genreScores.value).forEach((key) => {
+                    const raw = Number(genreScores.value[key] || 0)
+                    const bounded = Math.max(0, Math.min(10, raw))
+                    genreScores.value[key] = bounded
+                    scoreRecords.push(key + ':' + bounded)
+                })
+                writeCookie('user_genre_scores', scoreRecords.join(','))
+                saveGenresToLocalStorage()
+                if (isLoggedIn.value) {
+                    fetch('/api/profile', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ genre_preferences: genreScores.value })
+                    }).catch(() => {
+                        // Ignore persistence errors in UI flow.
+                    })
+                }
+            }
+
+            function selectAlgorithm(value) {
+                selectedAlgorithm.value = value
+                writeCookie('user_algorithm', value)
+                saveAlgorithmToLocalStorage(value)
+                if (isLoggedIn.value) {
+                    fetch('/api/profile', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            algorithm_preference: value === '1' ? 'algo1' : 'algo2'
+                        })
+                    }).catch(() => {
+                        // Ignore persistence errors in UI flow.
+                    })
+                }
+            }
+
             function applyUiTheme(uiValue) {
                 document.body.classList.remove('ui-dark', 'ui-light')
                 if (uiValue === '2') {
@@ -216,29 +385,57 @@
             function selectUi(uiValue) {
                 selectedUi.value = uiValue
                 applyUiTheme(uiValue)
+                writeCookie('user_ui', uiValue)
+                saveUiToLocalStorage(uiValue)
+                if (isLoggedIn.value) {
+                    fetch('/api/profile', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ui_preference: uiValue })
+                    }).catch(() => {
+                        // Ignore persistence errors in UI flow.
+                    })
+                }
             }
 
-            function startExperience() {
+            async function startExperience() {
                 if (!selectedAlgorithm.value || !selectedUi.value) {
                     alert('Algorithm and UI are required.')
                     return
                 }
 
-                const scoreRecords = []
-                Object.keys(genreScores.value).forEach((key) => {
-                    const raw = Number(genreScores.value[key] || 0)
-                    const bounded = Math.max(0, Math.min(10, raw))
-                    genreScores.value[key] = bounded
-                    scoreRecords.push(key + ':' + bounded)
-                })
-
+                saveGenrePreferences()
+                if (isLoggedIn.value) {
+                    const profilePayload = {
+                        algorithm_preference: selectedAlgorithm.value === '1' ? 'algo1' : 'algo2',
+                        ui_preference: selectedUi.value,
+                        genre_preferences: genreScores.value
+                    }
+                    try {
+                        await fetch('/api/profile', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(profilePayload)
+                        })
+                    } catch (_err) {
+                        // Ignore API errors and still keep client state.
+                    }
+                }
                 writeCookie('user_algorithm', selectedAlgorithm.value)
                 writeCookie('user_ui', selectedUi.value)
-                writeCookie('user_genre_scores', scoreRecords.join(','))
                 writeCookie('user_started', '1')
+                sessionStorage.setItem('scroll_to_original_movies', '1')
                 setupComplete.value = true
                 reloadPage()
             }
+
+            onMounted(() => {
+                hydrateFromLocalStorage()
+                if (sessionStorage.getItem('scroll_to_original_movies') === '1' && setupComplete.value) {
+                    sessionStorage.removeItem('scroll_to_original_movies')
+                    originalMoviesSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+            })
 
             applyUiTheme(selectedUi.value)
 
@@ -261,18 +458,46 @@
                 return parseInt(parts[2], 10)
             }
 
-            function saveMovieRating(movieId, rate) {
+            async function saveMovieRating(movieId, rate) {
                 const timestamp = Math.floor(Date.now() / 1000)
                 const record = '611|' + movieId + '|' + rate + '|' + timestamp
                 const index = getRateIndex(movieId)
 
                 if (index >= 0) {
+                    const current = getMovieRating(movieId)
+                    if (current === rate) {
+                        if (isLoggedIn.value) {
+                            try {
+                                await fetch('/api/ratings/by-movie/' + movieId, { method: 'DELETE' })
+                            } catch (_err) {
+                                // Ignore API errors and keep local behavior.
+                            }
+                        }
+                        userRates.value.splice(index, 1)
+                        writeCookie('user_rates', userRates.value.join(','))
+                        saveRatingsToLocalStorage()
+                        reloadPage()
+                        return
+                    }
                     userRates.value[index] = record
                 } else {
                     userRates.value.push(record)
                 }
 
+                if (isLoggedIn.value) {
+                    try {
+                        await fetch('/api/ratings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ movie_id: movieId, rating: rate })
+                        })
+                    } catch (_err) {
+                        // Ignore API errors and keep local behavior.
+                    }
+                }
+
                 writeCookie('user_rates', userRates.value.join(','))
+                saveRatingsToLocalStorage()
                 reloadPage()
             }
 
@@ -281,6 +506,7 @@
                 if (index >= 0) {
                     userRates.value.splice(index, 1)
                     writeCookie('user_rates', userRates.value.join(','))
+                    saveRatingsToLocalStorage()
                     reloadPage()
                 }
             }
@@ -289,9 +515,12 @@
                 selectedAlgorithm,
                 selectedUi,
                 setupComplete,
+                originalMoviesSection,
                 genreScores,
+                selectAlgorithm,
                 selectUi,
                 startExperience,
+                saveGenrePreferences,
                 saveMovieRating,
                 clearMovieRating,
                 getMovieRating,
@@ -305,7 +534,14 @@
 
 <style>
     .app-hero {
-        background: var(--hero-bg);
+        background: transparent;
+    }
+
+    .hero-container {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
 
     .setup-panel {
@@ -313,7 +549,11 @@
         border: 1px solid var(--panel-border);
         box-shadow: var(--panel-shadow);
         background: var(--panel-bg);
-        backdrop-filter: blur(10px);
+        backdrop-filter: none;
+        max-width: none;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .setup-header {
@@ -321,6 +561,16 @@
         margin-bottom: 2rem;
         border-bottom: 1px solid var(--border-soft);
         padding-bottom: 1.5rem;
+    }
+
+    .setup-header .title {
+        margin-bottom: 0.9rem !important;
+        line-height: 1.1;
+    }
+
+    .setup-header .subtitle {
+        margin-top: 0 !important;
+        line-height: 1.55;
     }
 
     .setup-block {
@@ -333,46 +583,87 @@
         text-align: center;
     }
 
-    .choice-row {
-        display: flex;
-        justify-content: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
+    .setup-label {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 1.1rem;
+        line-height: 1.2;
     }
 
-    .choice-pill,
+    .setup-choice-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.95rem;
+        margin: 0 auto;
+        max-width: 980px;
+    }
+
+    .choice-card,
     .node {
         border: 1px solid var(--chip-border);
         background: var(--chip-bg);
         color: var(--chip-text);
-        border-radius: 999px;
+        border-radius: 14px;
         cursor: pointer;
         transition: all 0.18s ease;
     }
 
-    .choice-pill {
-        min-width: 110px;
-        padding: 0.8rem 1.2rem;
-        font-weight: 700;
+    .choice-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 138px;
+        padding: 1.15rem;
+        text-align: center;
     }
 
-    .choice-pill.is-active,
+    .choice-icon {
+        font-size: 1.8rem;
+        line-height: 1;
+    }
+
+    .choice-title {
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .choice-desc {
+        font-size: 0.8rem;
+        line-height: 1.35;
+        color: var(--text-secondary);
+    }
+
+    .choice-card.is-active,
     .node.is-active {
         background: var(--chip-active-bg);
         color: var(--chip-active-text);
         border-color: var(--chip-active-bg);
     }
 
-    .choice-pill:hover,
+    .choice-card.is-active .choice-desc {
+        color: var(--chip-active-text);
+        opacity: 0.9;
+    }
+
+    .choice-card:hover,
     .node:hover {
         transform: translateY(-1px);
         border-color: var(--text-secondary);
     }
 
     .genre-list {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 1fr;
         gap: 0.5rem;
+    }
+
+    @media screen and (min-width: 1080px) {
+        .genre-list {
+            grid-template-columns: 1fr 1fr;
+            column-gap: 1.2rem;
+        }
     }
 
     .genre-row {
@@ -389,55 +680,81 @@
         font-size: 0.95rem;
     }
 
-    .genre-slider {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-
-    .slider-wrapper {
+    .genre-slider-wrapper {
         display: flex;
         align-items: center;
-        gap: 0.3rem;
-        padding: 0.25rem 0;
+        gap: 0.8rem;
     }
 
-    .slider-point {
-        font-size: 0.75rem;
+    .slider-label {
+        font-size: 0.8rem;
         font-weight: 700;
         color: var(--text-secondary);
         min-width: 1.2rem;
         text-align: center;
     }
 
-    .slider-dot {
-        width: 0.6rem;
-        height: 0.6rem;
-        padding: 0;
-        border: 1px solid var(--chip-border);
-        background: var(--chip-bg);
-        border-radius: 50%;
+    .line-slider {
+        flex: 1;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--border-soft);
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
         cursor: pointer;
-        flex: 0 0 auto;
-        transition: all 0.15s ease;
     }
 
-    .slider-dot.is-active {
-        background: var(--chip-active-bg);
-        border-color: var(--chip-active-bg);
-        width: 0.8rem;
-        height: 0.8rem;
-        box-shadow: 0 0 8px rgba(45, 90, 163, 0.4);
+    .line-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #2d5aa3;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(45, 90, 163, 0.4);
+        border: none;
+        transition: all 0.2s ease;
     }
 
-    .slider-dot:hover {
-        background: var(--chip-border);
-        transform: translateY(-1px);
+    .line-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.15);
+        box-shadow: 0 2px 10px rgba(45, 90, 163, 0.6);
+    }
+
+    .line-slider::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #2d5aa3;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(45, 90, 163, 0.4);
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+    .line-slider::-moz-range-thumb:hover {
+        transform: scale(1.15);
+        box-shadow: 0 2px 10px rgba(45, 90, 163, 0.6);
+    }
+
+    .line-slider::-moz-range-track {
+        background: transparent;
+        border: none;
+    }
+
+    .line-slider::-moz-range-progress {
+        background: #2d5aa3;
+        height: 4px;
+        border-radius: 2px;
     }
 
     .slider-value {
         font-size: 0.75rem;
         color: var(--text-secondary);
+        min-width: 2.2rem;
+        text-align: right;
     }
 
     .node-bar {
@@ -459,6 +776,7 @@
         padding: 0;
         font-size: 0.75rem;
         font-weight: 700;
+        border-radius: 999px;
     }
 
     .start-button {
@@ -477,6 +795,14 @@
     .movie-stack {
         display: grid;
         gap: 1rem;
+    }
+
+    @media screen and (min-width: 1100px) {
+        .original-movie-grid,
+        .movie-stack {
+            grid-template-columns: 1fr 1fr;
+            column-gap: 1rem;
+        }
     }
 
     .movie-card {
@@ -529,15 +855,41 @@
             flex-direction: column;
         }
 
+        .setup-label {
+            font-size: 1.15rem;
+            margin-bottom: 0.95rem;
+        }
+
         .movie-poster {
-            width: 100%;
+            width: 72px;
+            flex: 0 0 72px;
             aspect-ratio: 3 / 4;
-            flex-basis: auto;
+            align-self: flex-start;
+        }
+
+        .setup-choice-grid {
+            grid-template-columns: 1fr;
+            max-width: 100%;
+            gap: 0.7rem;
+        }
+
+        .choice-card {
+            min-height: 126px;
+            padding: 1rem 0.8rem;
+        }
+
+        .setup-header {
+            padding-bottom: 1.25rem;
         }
 
         .setup-panel {
-            margin-left: 0.5rem;
-            margin-right: 0.5rem;
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        .hero-container {
+            padding-left: 0;
+            padding-right: 0;
         }
     }
 </style>

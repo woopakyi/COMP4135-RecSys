@@ -1,8 +1,81 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from flaskr.models import db, User
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
+from flaskr.models import db, User, Rating, Feedback
 from sqlalchemy.exc import IntegrityError
+import secrets
+import requests
+from urllib.parse import urlencode
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+
+def _google_configured():
+    return bool(
+        current_app.config.get('GOOGLE_CLIENT_ID')
+        and current_app.config.get('GOOGLE_CLIENT_SECRET')
+    )
+
+
+def _google_redirect_uri():
+    configured = current_app.config.get('GOOGLE_REDIRECT_URI')
+    if configured:
+        return configured
+    return url_for('auth.google_callback', _external=True)
+
+
+def _merge_user_accounts(primary_user, secondary_user):
+    """Merge secondary_user into primary_user and remove secondary_user."""
+    if not primary_user or not secondary_user or primary_user.id == secondary_user.id:
+        return
+
+    # Keep admin if either account is admin.
+    primary_user.admin = bool(primary_user.admin or secondary_user.admin)
+
+    # Merge ratings: keep the newest timestamp when duplicates exist.
+    primary_ratings = {r.movie_id: r for r in Rating.query.filter_by(user_id=primary_user.id).all()}
+    secondary_ratings = Rating.query.filter_by(user_id=secondary_user.id).all()
+    for rating in secondary_ratings:
+        existing = primary_ratings.get(rating.movie_id)
+        if not existing:
+            rating.user_id = primary_user.id
+        else:
+            if rating.timestamp and (not existing.timestamp or rating.timestamp > existing.timestamp):
+                existing.rating = rating.rating
+                existing.timestamp = rating.timestamp
+            db.session.delete(rating)
+
+    # Merge feedback: keep only latest submission per feedback type.
+    merged_by_type = {}
+    all_feedback = Feedback.query.filter(Feedback.user_id.in_([primary_user.id, secondary_user.id])).all()
+    for row in all_feedback:
+        current = merged_by_type.get(row.feedback_type)
+        row_time = row.updated_at or row.created_at
+        current_time = (current.updated_at or current.created_at) if current else None
+        if not current or (row_time and current_time and row_time > current_time) or (row_time and not current_time):
+            merged_by_type[row.feedback_type] = row
+
+    for row in all_feedback:
+        winner = merged_by_type.get(row.feedback_type)
+        if not winner:
+            continue
+        if row.id == winner.id:
+            row.user_id = primary_user.id
+        else:
+            db.session.delete(row)
+
+    # Merge preference fields.
+    if primary_user.algorithm_preference in (None, '') and secondary_user.algorithm_preference:
+        primary_user.algorithm_preference = secondary_user.algorithm_preference
+    if primary_user.ui_preference in (None, '') and secondary_user.ui_preference:
+        primary_user.ui_preference = secondary_user.ui_preference
+
+    primary_genres = primary_user.get_genre_preferences()
+    secondary_genres = secondary_user.get_genre_preferences()
+    for genre_id, score in secondary_genres.items():
+        if genre_id not in primary_genres:
+            primary_genres[genre_id] = score
+    primary_user.set_genre_preferences(primary_genres)
+
+    db.session.delete(secondary_user)
 
 
 @bp.route('/register', methods=['GET', 'POST'])
@@ -85,8 +158,8 @@ def login():
             session.clear()
             session['user_id'] = user.id
             session['username'] = user.username
-            session['algorithm'] = user.algorithm
-            session['ui_variant'] = user.ui_variant
+            session['algorithm'] = user.algorithm_preference
+            session['ui_variant'] = user.ui_preference
             
             flash(f'Welcome back, {user.username}!', 'success')
             return redirect(url_for('main.index'))
@@ -94,15 +167,182 @@ def login():
             flash('Invalid email or password', 'error')
             return render_template('auth/login.html')
     
-    return render_template('auth/login.html')
+    return render_template('auth/login.html', google_login_enabled=_google_configured())
+
+
+@bp.route('/google/login')
+def google_login():
+    """Start Google OAuth login flow."""
+    if not _google_configured():
+        flash('Google login is not configured on the server.', 'error')
+        return redirect(url_for('auth.login'))
+
+    state = secrets.token_urlsafe(24)
+    session['google_oauth_state'] = state
+
+    params = {
+        'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
+        'redirect_uri': _google_redirect_uri(),
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'state': state,
+        'prompt': 'select_account'
+    }
+    auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urlencode(params)
+    return redirect(auth_url)
+
+
+@bp.route('/google/link')
+def google_link():
+    """Start Google OAuth flow for linking Google account to current logged-in account."""
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Please sign in first to link Google account.', 'error')
+        return redirect(url_for('auth.login'))
+
+    if not _google_configured():
+        flash('Google login is not configured on the server.', 'error')
+        return redirect(url_for('main.profile'))
+
+    state = secrets.token_urlsafe(24)
+    session['google_oauth_state'] = state
+    session['google_link_user_id'] = user_id
+
+    params = {
+        'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
+        'redirect_uri': _google_redirect_uri(),
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'state': state,
+        'prompt': 'select_account'
+    }
+    auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urlencode(params)
+    return redirect(auth_url)
+
+
+@bp.route('/google/callback')
+def google_callback():
+    """Handle Google OAuth callback."""
+    if not _google_configured():
+        flash('Google login is not configured on the server.', 'error')
+        return redirect(url_for('auth.login'))
+
+    state = request.args.get('state', '')
+    expected_state = session.pop('google_oauth_state', '')
+    if not state or state != expected_state:
+        flash('Invalid OAuth state. Please try again.', 'error')
+        return redirect(url_for('auth.login'))
+
+    code = request.args.get('code')
+    if not code:
+        flash('Google authorization failed. Please try again.', 'error')
+        return redirect(url_for('auth.login'))
+
+    try:
+        token_resp = requests.post(
+            'https://oauth2.googleapis.com/token',
+            data={
+                'code': code,
+                'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
+                'client_secret': current_app.config.get('GOOGLE_CLIENT_SECRET'),
+                'redirect_uri': _google_redirect_uri(),
+                'grant_type': 'authorization_code',
+            },
+            timeout=15,
+        )
+        token_resp.raise_for_status()
+        token_data = token_resp.json()
+        access_token = token_data.get('access_token')
+        if not access_token:
+            flash('Google login failed to return access token.', 'error')
+            return redirect(url_for('auth.login'))
+
+        userinfo_resp = requests.get(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=15,
+        )
+        userinfo_resp.raise_for_status()
+        profile = userinfo_resp.json()
+        email = (profile.get('email') or '').strip().lower()
+        google_sub = (profile.get('sub') or '').strip()
+        if not email:
+            flash('Google account has no usable email.', 'error')
+            return redirect(url_for('auth.login'))
+
+        username = (profile.get('name') or email.split('@')[0] or 'google-user').strip()
+        link_user_id = session.pop('google_link_user_id', None)
+
+        if link_user_id:
+            primary_user = db.session.get(User, link_user_id)
+            if not primary_user:
+                flash('Account link target not found. Please sign in and try again.', 'error')
+                return redirect(url_for('auth.login'))
+
+            secondary_user = None
+            if google_sub:
+                secondary_user = User.query.filter_by(google_sub=google_sub).first()
+            if not secondary_user:
+                secondary_user = User.query.filter_by(email=email).first()
+
+            if secondary_user and secondary_user.id != primary_user.id:
+                _merge_user_accounts(primary_user, secondary_user)
+
+            primary_user.google_sub = google_sub or primary_user.google_sub
+            db.session.commit()
+
+            session.clear()
+            session['user_id'] = primary_user.id
+            session['username'] = primary_user.username
+            session['algorithm'] = primary_user.algorithm_preference
+            session['ui_variant'] = primary_user.ui_preference
+
+            flash('Google account linked successfully.', 'success')
+            return redirect(url_for('main.profile'))
+
+        user = None
+        if google_sub:
+            user = User.query.filter_by(google_sub=google_sub).first()
+        if not user:
+            user = User.query.filter_by(email=email).first()
+
+        if not user:
+            base_username = username
+            suffix = 1
+            while User.query.filter_by(username=username).first():
+                suffix += 1
+                username = f'{base_username}{suffix}'
+
+            user = User(
+                username=username,
+                email=email,
+                google_sub=google_sub or None,
+            )
+            user.set_password(secrets.token_urlsafe(32))
+            db.session.add(user)
+            db.session.commit()
+        else:
+            user.google_sub = google_sub or user.google_sub
+            db.session.commit()
+
+        session.clear()
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session['algorithm'] = user.algorithm_preference
+        session['ui_variant'] = user.ui_preference
+
+        flash(f'Welcome, {user.username}!', 'success')
+        return redirect(url_for('main.index'))
+    except Exception:
+        db.session.rollback()
+        flash('Google login failed. Please try again later.', 'error')
+        return redirect(url_for('auth.login'))
 
 
 @bp.route('/logout')
 def logout():
     """Log out the current user"""
-    username = session.get('username', 'User')
     session.clear()
-    flash(f'Goodbye, {username}!', 'success')
     return redirect(url_for('main.index'))
 
 

@@ -12,9 +12,10 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    google_sub = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    algorithm_preference = db.Column(db.String(20), default='algo1')  # algo1 or algo2
-    ui_preference = db.Column(db.String(20), default='1')  # 1 (dark) or 2 (light)
+    algorithm_preference = db.Column(db.String(10), default='algo1')  # algo1 or algo2
+    ui_preference = db.Column(db.String(2), default='1')  # 1 (dark) or 2 (light)
     genre_preferences = db.Column(db.Text, default='{}')  # JSON string of {genre_id: score}
     admin = db.Column(db.Boolean, default=False)  # Admin user flag
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -90,13 +91,14 @@ class Feedback(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # NULL if anonymous
     
     # Submission details
-    submission_type = db.Column(db.String(20), nullable=False)  # 'logged' or 'anonymous'
+    submission_type = db.Column(db.String(10), nullable=False)  # 'logged' or 'anonymous'
     voter_name = db.Column(db.String(120), nullable=True)  # Full name (may differ from account)
     voter_email = db.Column(db.String(120), nullable=True)  # Email (may differ from account)
     
     # Feedback type and vote
-    feedback_type = db.Column(db.String(50), nullable=False)  # 'algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2'
-    vote_choice = db.Column(db.String(20), nullable=False)  # 'better', 'worse', 'same'
+    feedback_type = db.Column(db.String(20), nullable=False)  # 'algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2'
+    vote_choice = db.Column(db.String(8), nullable=False)  # 'algo1', 'algo2', 'ui1', 'ui2'
+    feedback_text = db.Column(db.Text, nullable=True)
     
     # Consent
     consent_agreed = db.Column(db.Boolean, default=False)
@@ -108,6 +110,8 @@ class Feedback(db.Model):
     # Constraint: logged-in users can only submit each feedback type once
     __table_args__ = (
         db.UniqueConstraint('user_id', 'feedback_type', name='unique_user_feedback_type'),
+        db.Index('idx_feedback_type_submission', 'feedback_type', 'submission_type'),
+        db.Index('idx_feedback_updated_at', 'updated_at'),
     )
 
 
