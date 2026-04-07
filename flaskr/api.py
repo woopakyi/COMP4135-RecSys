@@ -347,14 +347,18 @@ def get_feedback():
 
 @api_bp.route('/feedback/prefill', methods=['GET'])
 def feedback_prefill():
-    """Get default participant information and completed feedback types for logged users."""
+    """Get default participant information and completed feedback types for signed-in users."""
     try:
         if not g.user:
             return jsonify({'logged_in': False, 'defaults': {}, 'submitted_types': []})
 
-        user_rows = Feedback.query.filter_by(user_id=g.user.id).all()
+        user_rows = Feedback.query.filter_by(user_id=g.user.id).filter(
+            Feedback.submission_type.in_(['participant', 'logged'])
+        ).all()
         submitted_types = [row.feedback_type for row in user_rows]
-        latest_row = Feedback.query.filter_by(user_id=g.user.id).order_by(desc(Feedback.created_at)).first()
+        latest_row = Feedback.query.filter_by(user_id=g.user.id).filter(
+            Feedback.submission_type.in_(['participant', 'logged'])
+        ).order_by(desc(Feedback.created_at)).first()
         default_full_name = (latest_row.full_name if latest_row and latest_row.full_name else g.user.username) or ''
         default_contact_email = (latest_row.contact_email if latest_row and latest_row.contact_email else g.user.email) or ''
 
@@ -382,7 +386,7 @@ def submit_feedback():
         rating_option_b = data.get('rating_option_b')
         submission_type = data.get('submission_type')
         valid_types = set(FEEDBACK_TYPE_CONFIG.keys())
-        valid_submission_types = {'logged', 'anonymous'}
+        valid_submission_types = {'participant', 'anonymous', 'logged'}
 
         if not feedback_type or rating_option_a is None or rating_option_b is None or not submission_type:
             return jsonify({'error': 'Missing required fields'}), 400
@@ -402,10 +406,10 @@ def submit_feedback():
         if submission_type not in valid_submission_types:
             return jsonify({'error': 'Invalid submission type'}), 400
 
-        if submission_type == 'logged' and not g.user:
-            return jsonify({'error': 'Login required for logged submission'}), 401
-
         if submission_type == 'logged':
+            submission_type = 'participant'
+
+        if submission_type == 'participant':
             if not full_name:
                 full_name = g.user.username if g.user else ''
             if not contact_email:
@@ -415,18 +419,19 @@ def submit_feedback():
 
         existing_for_type = None
 
-        # For logged-in users, allow repeated submissions but keep a helpful message.
-        if g.user and submission_type == 'logged':
-            existing_for_type = Feedback.query.filter_by(
-                user_id=g.user.id,
-                feedback_type=feedback_type
-            ).order_by(desc(Feedback.created_at)).first()
+        # For participant submissions, allow repeated submissions but keep a helpful message.
+        if submission_type == 'participant':
+            if g.user:
+                existing_for_type = Feedback.query.filter_by(
+                    user_id=g.user.id,
+                    feedback_type=feedback_type
+                ).filter(Feedback.submission_type.in_(['participant', 'logged'])).order_by(desc(Feedback.created_at)).first()
 
             feedback = Feedback(
-                user_id=g.user.id,
+                user_id=g.user.id if g.user else None,
                 full_name=full_name,
                 contact_email=contact_email,
-                submission_type=submission_type,
+                submission_type='participant',
                 feedback_type=feedback_type,
                 rating_option_a=rating_option_a,
                 rating_option_b=rating_option_b,
@@ -437,7 +442,7 @@ def submit_feedback():
             feedback = Feedback(
                 full_name=full_name or None,
                 contact_email=contact_email or None,
-                submission_type=submission_type,
+                submission_type='anonymous',
                 feedback_type=feedback_type,
                 rating_option_a=rating_option_a,
                 rating_option_b=rating_option_b,
@@ -457,18 +462,44 @@ def submit_feedback():
 
 @api_bp.route('/feedback/progress', methods=['GET'])
 def feedback_progress():
-    """Return completion progress for each feedback type (logged users only)."""
-    if not g.user:
-        return jsonify({'error': 'Not logged in'}), 401
+    """Return feedback progress for profile view.
 
+    Logged-in users get per-user completion, while guests get aggregate completion.
+    Progress only counts participant submissions.
+    """
     all_types = list(FEEDBACK_TYPE_CONFIG.keys())
-    submitted = {row.feedback_type for row in Feedback.query.filter_by(user_id=g.user.id).all()}
-    progress = [{
-        'feedback_type': ft,
-        'completed': ft in submitted,
-    } for ft in all_types]
+    participant_types = ['participant', 'logged']
+    if g.user:
+        submitted = {
+            row.feedback_type for row in Feedback.query.filter_by(user_id=g.user.id).filter(
+                Feedback.submission_type.in_(participant_types)
+            ).all()
+        }
+        progress = [{
+            'feedback_type': ft,
+            'completed': ft in submitted,
+            'submission_count': None,
+        } for ft in all_types]
+        completed_count = len(submitted.intersection(set(all_types)))
+    else:
+        submitted_rows = Feedback.query.with_entities(Feedback.feedback_type).filter(
+            Feedback.submission_type.in_(participant_types)
+        ).all()
+        submission_counts = {ft: 0 for ft in all_types}
+        for row in submitted_rows:
+            if row.feedback_type in submission_counts:
+                submission_counts[row.feedback_type] += 1
+
+        progress = [{
+            'feedback_type': ft,
+            'completed': submission_counts[ft] > 0,
+            'submission_count': submission_counts[ft],
+        } for ft in all_types]
+        completed_count = sum(1 for ft in all_types if submission_counts[ft] > 0)
+
     return jsonify({
-        'completed_count': len(submitted.intersection(set(all_types))),
+        'scope': 'user' if g.user else 'global',
+        'completed_count': completed_count,
         'total_count': len(all_types),
         'progress': progress,
     })
@@ -479,14 +510,16 @@ def evaluation_summary():
     """Return aggregated rating stats for evaluation charts."""
     try:
         source_filter = request.args.get('source', 'all')
-        if source_filter not in {'all', 'logged', 'anonymous'}:
+        if source_filter == 'logged':
+            source_filter = 'participant'
+        if source_filter not in {'all', 'participant', 'anonymous'}:
             return jsonify({'error': 'Invalid source filter'}), 400
 
         types = list(FEEDBACK_TYPE_CONFIG.keys())
 
         def apply_source_filter(query):
-            if source_filter == 'logged':
-                return query.filter(Feedback.submission_type == 'logged')
+            if source_filter == 'participant':
+                return query.filter(Feedback.submission_type.in_(['participant', 'logged']))
             if source_filter == 'anonymous':
                 return query.filter(Feedback.submission_type == 'anonymous')
             return query
@@ -536,12 +569,16 @@ def evaluation_votes():
             return jsonify({'error': 'Admin access required'}), 403
 
         source_filter = request.args.get('source', 'all')
+        if source_filter == 'logged':
+            source_filter = 'participant'
         type_filter = request.args.get('feedback_type', 'all')
 
         query = Feedback.query
 
-        if source_filter in {'logged', 'anonymous'}:
-            query = query.filter(Feedback.submission_type == source_filter)
+        if source_filter == 'participant':
+            query = query.filter(Feedback.submission_type.in_(['participant', 'logged']))
+        elif source_filter == 'anonymous':
+            query = query.filter(Feedback.submission_type == 'anonymous')
 
         if type_filter in FEEDBACK_TYPE_CONFIG:
             query = query.filter(Feedback.feedback_type == type_filter)
@@ -553,7 +590,7 @@ def evaluation_votes():
                 'user_id': row.user_id,
                 'full_name': row.full_name,
                 'contact_email': row.contact_email,
-                'submission_type': row.submission_type,
+                'submission_type': 'participant' if row.submission_type == 'logged' else row.submission_type,
                 'feedback_type': row.feedback_type,
                 'option_a_label': FEEDBACK_TYPE_CONFIG.get(row.feedback_type, {}).get('option_a_label', 'Option A'),
                 'option_b_label': FEEDBACK_TYPE_CONFIG.get(row.feedback_type, {}).get('option_b_label', 'Option B'),

@@ -77,12 +77,12 @@ class Feedback(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # NULL if anonymous
 
-    # Contact details for logged-in submissions
+    # Contact details for participant submissions
     full_name = db.Column(db.String(120), nullable=True)
     contact_email = db.Column(db.String(120), nullable=True)
     
     # Submission details
-    submission_type = db.Column(db.String(10), nullable=False)  # 'logged' or 'anonymous'
+    submission_type = db.Column(db.String(20), nullable=False)  # 'participant' or 'anonymous'
     
     # Feedback type and paired ratings
     feedback_type = db.Column(db.String(20), nullable=False)  # 'algorithm_eval', 'ui_eval'

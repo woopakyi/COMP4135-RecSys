@@ -25,7 +25,7 @@
                 {% if g.user %}
                     <div class="button-with-status">
                         <button @click="updateProfile" class="button is-primary is-light save-username-btn">Save Username</button>
-                        <span v-if="inlineStatus.saveUsername" class="inline-status success-inline">Done!</span>
+                        <span class="inline-status success-inline" :class="{ 'is-visible': inlineStatus.saveUsername }">Done!</span>
                     </div>
                 {% endif %}
             </div>
@@ -59,8 +59,9 @@
 
         <div class="feedback-progress-section">
             <h2 class="subtitle">Feedback Progress</h2>
-            <template v-if="isLoggedIn">
-                <p class="has-text-grey mb-3">Completed [[ feedbackProgress.completed_count ]] of [[ feedbackProgress.total_count ]] evaluation types.</p>
+            <template v-if="feedbackProgress && feedbackProgress.progress && feedbackProgress.progress.length">
+                <p class="has-text-grey mb-3" v-if="feedbackProgress.scope === 'user'">Completed [[ feedbackProgress.completed_count ]] of [[ feedbackProgress.total_count ]] evaluation types.</p>
+                <p class="has-text-grey mb-3" v-else>Completed [[ feedbackProgress.completed_count ]] of [[ feedbackProgress.total_count ]] evaluation types.</p>
                 <div class="progress-grid">
                     <div class="progress-chip" v-for="item in feedbackProgress.progress" :key="item.feedback_type" :class="{ 'is-complete': item.completed }">
                         <span>[[ formatFeedbackType(item.feedback_type) ]]</span>
@@ -68,7 +69,7 @@
                     </div>
                 </div>
             </template>
-            <p v-else class="has-text-grey mb-1">Login to save your feedback progress.</p>
+            <p v-else class="has-text-grey mb-1">No feedback progress available yet.</p>
         </div>
 
         <!-- Preferences Section -->
@@ -77,7 +78,7 @@
                 <h2 class="subtitle">Preferences</h2>
                 <div class="button-with-status">
                     <button @click="resetPreferences" class="button is-warning is-light">Reset Preferences</button>
-                    <span v-if="inlineStatus.resetPreferences" class="inline-status success-inline">Done!</span>
+                    <span class="inline-status success-inline" :class="{ 'is-visible': inlineStatus.resetPreferences }">Done!</span>
                 </div>
             </div>
 
@@ -145,7 +146,7 @@
                 <h2 class="subtitle">Movie Ratings</h2>
                 <div class="button-with-status">
                     <button @click="clearAllRatings" class="button is-warning is-light">Clear All</button>
-                    <span v-if="inlineStatus.clearAllRatings" class="inline-status success-inline">Done!</span>
+                    <span class="inline-status success-inline" :class="{ 'is-visible': inlineStatus.clearAllRatings }">Done!</span>
                 </div>
             </div>
 
@@ -346,15 +347,27 @@
     }
 
     .app-body.ui-light .preferences-section .setup-choice-grid .choice-card {
-        background: #ffffff;
-        border-color: #dbe2ea;
+        background: #f8fafc;
+        border-color: #94a3b8;
         color: #334155;
+        box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
     }
 
     .app-body.ui-light .preferences-section .setup-choice-grid .choice-card.is-active {
         background: #111827;
         border-color: #111827;
         color: #ffffff;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+    }
+
+    .app-body.ui-light .preferences-section .setup-choice-grid .choice-card:hover {
+        border-color: #334155;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+    }
+
+    .app-body.ui-light .save-username-btn,
+    .app-body.ui-light .button.is-warning.is-light {
+        border: 1px solid #9ca3af;
     }
 
     .app-body.ui-light .preferences-section .setup-choice-grid .choice-card .choice-title,
@@ -686,10 +699,17 @@
     }
 
     .inline-status {
+        opacity: 0;
         font-weight: 600;
         font-size: 0.95rem;
         white-space: nowrap;
-        animation: fadeInOut 0.4s ease;
+        min-width: 3.2rem;
+        display: inline-block;
+        transition: opacity 0.2s ease;
+    }
+
+    .inline-status.is-visible {
+        opacity: 1;
     }
 
     .inline-status.success-inline {
@@ -698,13 +718,6 @@
 
     .inline-status.error-inline {
         color: #ef4444;
-    }
-
-    @keyframes fadeInOut {
-        0% { opacity: 0; }
-        10% { opacity: 1; }
-        90% { opacity: 1; }
-        100% { opacity: 0; }
     }
 
     @keyframes slideIn {

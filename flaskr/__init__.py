@@ -57,6 +57,8 @@ def create_app(test_config=None):
                 db.session.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS contact_email"))
                 db.session.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS google_login_only"))
                 db.session.execute(text("ALTER TABLE feedback DROP CONSTRAINT IF EXISTS unique_user_feedback_type"))
+                db.session.execute(text("ALTER TABLE feedback ALTER COLUMN submission_type TYPE VARCHAR(20)"))
+                db.session.execute(text("UPDATE feedback SET submission_type = 'participant' WHERE submission_type = 'logged'"))
                 db.session.execute(text("ALTER TABLE feedback DROP COLUMN IF EXISTS updated_at"))
                 db.session.execute(text("DROP INDEX IF EXISTS idx_feedback_updated_at"))
                 db.session.execute(text("DROP TABLE IF EXISTS genre_scores"))

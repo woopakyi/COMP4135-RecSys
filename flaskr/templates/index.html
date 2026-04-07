@@ -892,15 +892,22 @@
     }
 
     .app-body.ui-light .setup-choice-grid .choice-card {
-        background: #ffffff;
-        border-color: #dbe2ea;
+        background: #f8fafc;
+        border-color: #94a3b8;
         color: #334155;
+        box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
     }
 
     .app-body.ui-light .setup-choice-grid .choice-card.is-active {
         background: #111827;
         border-color: #111827;
         color: #ffffff;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+    }
+
+    .app-body.ui-light .setup-choice-grid .choice-card:hover {
+        border-color: #334155;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
     }
 
     .app-body.ui-light .setup-choice-grid .choice-card .choice-title,
@@ -1066,6 +1073,10 @@
     .start-button {
         min-width: 180px;
         border-radius: 999px;
+    }
+
+    .app-body.ui-light .start-button {
+        border: 1px solid #334155;
     }
 
     .movie-section {

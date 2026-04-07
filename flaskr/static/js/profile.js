@@ -221,9 +221,6 @@ const app = createApp({
         },
 
         async loadFeedbackProgress() {
-            if (!this.isLoggedIn) {
-                return;
-            }
             try {
                 const response = await fetch('/api/feedback/progress');
                 if (!response.ok) throw new Error('Failed to load feedback progress');

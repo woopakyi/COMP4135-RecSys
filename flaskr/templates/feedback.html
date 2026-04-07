@@ -3,7 +3,7 @@
 
 {% block content %}
 <main>
-    <div id="feedback-app" v-cloak data-logged-in="{{ 'true' if g.user else 'false' }}" data-default-submission="{{ 'logged' if g.user else 'anonymous' }}">
+    <div id="feedback-app" v-cloak data-logged-in="{{ 'true' if g.user else 'false' }}" data-default-submission="participant">
         <div class="feedback-container">
             <div class="feedback-header">
                 <h1 class="title feedback-title">Your Feedback Matters</h1>
@@ -16,14 +16,12 @@
                     <div class="choice-grid submission-choice-grid">
                         <button
                             type="button"
-                            @click="submissionType = 'logged'"
-                            :class="['choice-card', { 'is-selected': submissionType === 'logged', 'is-disabled': !isLoggedIn }]"
-                            :disabled="!isLoggedIn"
+                            @click="submissionType = 'participant'"
+                            :class="['choice-card', { 'is-selected': submissionType === 'participant' }]"
                         >
                             <span class="choice-icon">👤</span>
-                            <span class="choice-label">As Logged-In User</span>
-                            <span class="choice-desc">Your personal details will be recorded</span>
-                            <span class="disabled-badge" v-if="!isLoggedIn">Sign in to use</span>
+                            <span class="choice-label">As a Participant</span>
+                            <span class="choice-desc">Name and contact email will be recorded</span>
                         </button>
 
                         <button
@@ -38,9 +36,9 @@
                     </div>
                 </div>
 
-                <div class="form-question" v-if="submissionType === 'logged' && isLoggedIn">
+                <div class="form-question" v-if="submissionType === 'participant'">
                     <label class="question-title">Your details *</label>
-                    <p class="question-desc">Please confirm the name and contact email for this logged-in submission.</p>
+                    <p class="question-desc">Please provide the name and contact email for this participant submission.</p>
 
                     <div class="form-group">
                         <label for="feedback-full-name">Full Name</label>
@@ -67,6 +65,7 @@
                             placeholder="Enter your contact email"
                         >
                     </div>
+
                 </div>
 
                 <div class="form-question">
@@ -112,7 +111,7 @@
                             <span class="choice-desc">Compare UI modes based on Algorithm 2</span>
                         </button>
                     </div>
-                    <p class="question-desc" v-if="submissionType === 'logged' && hasSubmittedCurrentType">
+                    <p class="question-desc" v-if="submissionType === 'participant' && hasSubmittedCurrentType">
                         <span class="already-submitted-note">You have already submitted this evaluation, but you can submit it again.</span>
                     </p>
                 </div>
@@ -162,6 +161,19 @@
                             maxlength="1000"
                             placeholder="Tell us anything else that can improve recommendations or UI..."
                         ></textarea>
+                    </div>
+                </div>
+
+                <div class="form-question consent-question" v-if="submissionType === 'participant'">
+                    <div class="form-group consent-group">
+                        <label class="consent-label" for="feedback-consent">
+                            <input
+                                id="feedback-consent"
+                                v-model="consentAgreed"
+                                type="checkbox"
+                            >
+                            <span>I understand that my feedback and personal information will help improve this website's recommendations as part of the COMP4135 project.</span>
+                        </label>
                     </div>
                 </div>
 
@@ -317,15 +329,21 @@
     }
 
     .app-body.ui-light .choice-card {
-        background: #ffffff;
-        border-color: #dbe2ea;
+        background: #f8fafc;
+        border-color: #94a3b8;
         color: #334155;
+        box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
     }
 
     .app-body.ui-light .choice-card.is-selected {
         background: #111827;
         border-color: #111827;
         color: #ffffff;
+    }
+
+    .app-body.ui-light .choice-card:hover:not(:disabled) {
+        border-color: #334155;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
     }
 
     .app-body.ui-light .choice-card.is-selected .choice-label,
@@ -364,6 +382,44 @@
     .feedback-textarea {
         resize: vertical;
         min-height: 110px;
+    }
+
+    .consent-group {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .consent-question {
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+
+    .form-group .consent-label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        font-size: 0.92rem;
+        color: var(--text-secondary);
+        line-height: 1.35;
+        margin-bottom: 0;
+    }
+
+    .form-group .consent-label input[type="checkbox"] {
+        width: auto;
+        height: auto;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        margin-top: 0.15rem;
+        margin-right: 0;
+        flex: 0 0 auto;
+    }
+
+    .form-group .consent-label span {
+        flex: 1 1 auto;
     }
 
     .rating-line-block {
@@ -454,6 +510,18 @@
         font-weight: 600;
     }
 
+    .app-body.ui-light .submit-btn {
+        background: #0f172a;
+        border-color: #0f172a;
+        color: #ffffff;
+    }
+
+    .app-body.ui-light .submit-btn:hover:not(:disabled) {
+        background: #1e293b;
+        border-color: #1e293b;
+        color: #ffffff;
+    }
+
     .submit-status {
         margin-top: 0.9rem;
         text-align: center;
@@ -504,6 +572,8 @@
 <script>
 const { createApp } = Vue;
 const feedbackRoot = document.getElementById('feedback-app');
+const FEEDBACK_PARTICIPANT_PROFILE_KEY = 'feedback_participant_profile';
+const FEEDBACK_PARTICIPANT_TYPES_KEY = 'feedback_participant_submitted_types';
 
 const app = createApp({
     data() {
@@ -514,6 +584,7 @@ const app = createApp({
             contactEmail: '',
             feedbackType: null,
             submittedTypes: [],
+            consentAgreed: false,
             ratingOptionA: null,
             ratingOptionB: null,
             feedbackText: '',
@@ -564,8 +635,9 @@ const app = createApp({
         },
         canSubmit() {
             const hasScores = Number.isInteger(this.ratingOptionA) && Number.isInteger(this.ratingOptionB);
-            const hasContactDetails = this.submissionType !== 'logged' || (this.fullName.trim() && this.contactEmail.trim());
-            return !!(this.submissionType && this.feedbackType && hasScores && hasContactDetails);
+            const hasContactDetails = this.submissionType !== 'participant' || (this.fullName.trim() && this.contactEmail.trim());
+            const hasConsent = this.submissionType !== 'participant' || this.consentAgreed;
+            return !!(this.submissionType && this.feedbackType && hasScores && hasContactDetails && hasConsent);
         }
     },
     methods: {
@@ -576,6 +648,15 @@ const app = createApp({
         },
         async loadPrefill() {
             if (!this.isLoggedIn) {
+                try {
+                    const storedProfile = JSON.parse(localStorage.getItem(FEEDBACK_PARTICIPANT_PROFILE_KEY) || '{}');
+                    const storedTypes = JSON.parse(localStorage.getItem(FEEDBACK_PARTICIPANT_TYPES_KEY) || '[]');
+                    this.fullName = (storedProfile.full_name || this.fullName || '').trim();
+                    this.contactEmail = (storedProfile.contact_email || this.contactEmail || '').trim();
+                    this.submittedTypes = Array.isArray(storedTypes) ? storedTypes : [];
+                } catch (_err) {
+                    this.submittedTypes = [];
+                }
                 return;
             }
             try {
@@ -600,8 +681,9 @@ const app = createApp({
             try {
                 const payload = {
                     submission_type: this.submissionType,
-                    full_name: this.submissionType === 'logged' ? this.fullName : null,
-                    contact_email: this.submissionType === 'logged' ? this.contactEmail : null,
+                    full_name: this.submissionType === 'participant' ? this.fullName : null,
+                    contact_email: this.submissionType === 'participant' ? this.contactEmail : null,
+                    consent_agreed: this.submissionType === 'participant' ? this.consentAgreed : false,
                     feedback_type: this.feedbackType,
                     rating_option_a: this.ratingOptionA,
                     rating_option_b: this.ratingOptionB,
@@ -615,32 +697,54 @@ const app = createApp({
                 });
 
                 if (!response.ok) throw new Error('Failed to submit feedback');
-                this.statusMessage = 'Submitted successfully. Thanks for your feedback.';
-                this.statusType = 'success';
+                this.showStatus('Submitted successfully. Thanks for your feedback.', 'success');
                 if (this.feedbackType && !this.submittedTypes.includes(this.feedbackType)) {
                     this.submittedTypes.push(this.feedbackType);
                 }
+                if (this.submissionType === 'participant') {
+                    try {
+                        localStorage.setItem(FEEDBACK_PARTICIPANT_PROFILE_KEY, JSON.stringify({
+                            full_name: this.fullName.trim(),
+                            contact_email: this.contactEmail.trim()
+                        }));
+                        localStorage.setItem(FEEDBACK_PARTICIPANT_TYPES_KEY, JSON.stringify(this.submittedTypes));
+                    } catch (_err) {
+                        // Ignore localStorage write errors.
+                    }
+                }
                 this.resetForm();
             } catch (_error) {
-                this.statusMessage = 'Failed to submit feedback. Please check your inputs and try again.';
-                this.statusType = 'error';
+                this.showStatus('Failed to submit feedback. Please check your inputs and try again.', 'error');
             } finally {
                 this.isSubmitting = false;
             }
         },
 
         resetForm() {
-            this.submissionType = this.isLoggedIn ? 'logged' : 'anonymous';
-            if (this.submissionType === 'logged') {
+            if (this.isLoggedIn) {
                 this.loadPrefill();
             } else {
                 this.fullName = '';
                 this.contactEmail = '';
+                this.loadPrefill();
             }
             this.feedbackType = null;
+            this.consentAgreed = false;
             this.ratingOptionA = null;
             this.ratingOptionB = null;
             this.feedbackText = '';
+        },
+
+        showStatus(message, type) {
+            this.statusMessage = message;
+            this.statusType = type;
+            if (type === 'success') {
+                setTimeout(() => {
+                    if (this.statusType === 'success') {
+                        this.statusMessage = '';
+                    }
+                }, 3500);
+            }
         }
     },
     mounted() {

@@ -14,7 +14,7 @@
             <p class="filter-label">Chart Source</p>
             <div class="chip-group">
                 <button type="button" class="chip-btn" :class="{ 'is-active': sourceFilter === 'all' }" @click="setSourceFilter('all')">All</button>
-                <button type="button" class="chip-btn" :class="{ 'is-active': sourceFilter === 'logged' }" @click="setSourceFilter('logged')">Logged Users</button>
+                <button type="button" class="chip-btn" :class="{ 'is-active': sourceFilter === 'participant' }" @click="setSourceFilter('participant')">Participants</button>
                 <button type="button" class="chip-btn" :class="{ 'is-active': sourceFilter === 'anonymous' }" @click="setSourceFilter('anonymous')">Anonymous</button>
             </div>
         </div>
@@ -67,7 +67,7 @@
                     <span class="filter-name">Source</span>
                     <div class="chip-group">
                         <button type="button" class="chip-btn" :class="{ 'is-active': tableSource === 'all' }" @click="setTableSource('all')">All</button>
-                        <button type="button" class="chip-btn" :class="{ 'is-active': tableSource === 'logged' }" @click="setTableSource('logged')">Logged</button>
+                        <button type="button" class="chip-btn" :class="{ 'is-active': tableSource === 'participant' }" @click="setTableSource('participant')">Participant</button>
                         <button type="button" class="chip-btn" :class="{ 'is-active': tableSource === 'anonymous' }" @click="setTableSource('anonymous')">Anonymous</button>
                     </div>
                 </div>
@@ -442,9 +442,9 @@ const evalApp = createApp({
     },
     methods: {
         getChartDescription() {
-            if (this.sourceFilter === 'logged') return 'Logged user submissions only';
+            if (this.sourceFilter === 'participant') return 'Participant submissions only';
             if (this.sourceFilter === 'anonymous') return 'Anonymous submissions only';
-            return 'Logged user and anonymous submissions';
+            return 'Participant and anonymous submissions';
         },
         async loadSummary() {
             const res = await fetch(`/api/evaluation/summary?source=${encodeURIComponent(this.sourceFilter)}`);
