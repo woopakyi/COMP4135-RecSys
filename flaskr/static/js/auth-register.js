@@ -31,7 +31,13 @@ const app = createApp({
         errorMessage.value = 'Username must be at least 3 characters.'
         return
       }
-      if (!email.value.includes('@')) {
+      const normalizedEmail = email.value.trim().toLowerCase()
+      if (normalizedEmail.endsWith('@gmail.com')) {
+        event.preventDefault()
+        window.location.href = '/auth/google/login'
+        return
+      }
+      if (!/^[^@\s]+@[^@\s]+$/.test(normalizedEmail)) {
         event.preventDefault()
         errorMessage.value = 'Please enter a valid email address.'
         return

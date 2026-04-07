@@ -22,6 +22,13 @@ def _google_redirect_uri():
     return url_for('auth.google_callback', _external=True)
 
 
+def _is_simple_email(email):
+    if not email:
+        return False
+    local_part, separator, domain_part = email.partition('@')
+    return bool(separator and local_part and domain_part and '@' not in domain_part)
+
+
 def _merge_user_accounts(primary_user, secondary_user):
     """Merge secondary_user into primary_user and remove secondary_user."""
     if not primary_user or not secondary_user or primary_user.id == secondary_user.id:
@@ -72,6 +79,9 @@ def register():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
+
+        if email.endswith('@gmail.com'):
+            return redirect(url_for('auth.google_login'))
         
         # Validation
         errors = []
@@ -83,7 +93,7 @@ def register():
             
         if not email:
             errors.append('Email is required')
-        elif '@' not in email:
+        elif not _is_simple_email(email):
             errors.append('Invalid email format')
             
         if not password:
