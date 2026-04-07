@@ -46,7 +46,11 @@ def create_app(test_config=None):
         try:
             from sqlalchemy import text
             db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS feedback_text TEXT"))
+            db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS rating_option_a INTEGER"))
+            db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS rating_option_b INTEGER"))
             db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(120)"))
+            db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS full_name VARCHAR(120)"))
+            db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS contact_email VARCHAR(120)"))
             # Keep user table compact: voter_name/voter_email live in feedback table.
             if (app.config.get('SQLALCHEMY_DATABASE_URI') or '').startswith('postgresql://'):
                 db.session.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS full_name"))
@@ -59,6 +63,23 @@ def create_app(test_config=None):
                 db.session.execute(text("DROP TABLE IF EXISTS votes"))
             db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)"))
             db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_feedback_type_submission ON feedback(feedback_type, submission_type)"))
+
+            # One-time tidy-up: rebuild feedback table without legacy columns and with ordered fields.
+            if (app.config.get('SQLALCHEMY_DATABASE_URI') or '').startswith('postgresql://'):
+                from .models import Feedback
+                cols = db.session.execute(text("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = 'feedback'
+                """)).fetchall()
+                col_names = {row[0] for row in cols}
+                legacy_cols = {'voter_name', 'voter_email', 'consent_agreed'}
+                needs_rebuild = bool(col_names.intersection(legacy_cols))
+                if needs_rebuild:
+                    db.session.execute(text('DROP TABLE IF EXISTS feedback CASCADE'))
+                    db.session.commit()
+                    Feedback.__table__.create(db.engine, checkfirst=True)
+                    db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_feedback_type_submission ON feedback(feedback_type, submission_type)"))
             db.session.commit()
         except Exception:
             db.session.rollback()

@@ -147,7 +147,6 @@ def login():
             session['algorithm'] = user.algorithm_preference
             session['ui_variant'] = user.ui_preference
 
-            flash('Signed in successfully.', 'success')
             return redirect(url_for('main.index'))
         else:
             flash('Invalid email or password', 'error')
@@ -335,7 +334,6 @@ def google_callback():
         session['algorithm'] = user.algorithm_preference
         session['ui_variant'] = user.ui_preference
 
-        flash('Signed in successfully.', 'success')
         return redirect(url_for('main.index'))
     except Exception:
         db.session.rollback()

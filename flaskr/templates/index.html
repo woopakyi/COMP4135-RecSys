@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Home - Movie Recommender{% endblock %}
+{% block body_class %}homepage{% endblock %}
 {% block content %}
 <div id="app" v-cloak data-logged-in="{{ 'true' if g.user else 'false' }}">
     <section class="hero app-hero" v-if="!setupComplete">
@@ -81,21 +82,18 @@
             <template v-if="setupComplete">
                 <div class="movie-section">
                     <div class="section-title-block">
-                        <h2 class="title is-4 mb-1">Original Movies</h2>
+                        <h2 class="title is-4 mb-1">Movies based on your Genre Ratings</h2>
                         <p class="has-text-grey">Rate the movies below from 1 to 10.</p>
                     </div>
-                    <div class="movie-stack original-movie-grid">
+                    <div class="movie-stack original-movie-grid" id="genre-movie-stack">
                         {% for movie in default_genres_movies %}
-                        <div class="movie-card">
+                        <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
                             <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
-                                <p class="is-size-7 mb-1">{{ movie['release_date'] }}</p>
-                                <p class="is-size-7 mb-2">{{ movie['genres'] | join(', ') }}</p>
-                                {% if movie['rated_time_ago'] %}
-                                <p class="is-size-7 has-text-link mb-2">{{ movie['rated_time_ago'] }}</p>
-                                {% endif %}
-                                <div class="node-bar small">
+                                <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or '' }}</p>
+                                <div class="node-bar line-nodes">
                                     {% for rate in range(1, 11) %}
                                     <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
                                     {% endfor %}
@@ -113,18 +111,15 @@
                         <h2 class="title is-4 mb-1">Recommended</h2>
                         <p class="has-text-grey">{{ recommendations_message }}</p>
                     </div>
-                    <div class="movie-stack">
+                    <div class="movie-stack" id="recommended-movie-stack">
                         {% for movie in recommendations %}
-                        <div class="movie-card">
+                        <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
                             <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
-                                <p class="is-size-7 mb-1">{{ movie['release_date'] }}</p>
-                                <p class="is-size-7 mb-1">{{ movie['genres'] | join(', ') }}</p>
-                                {% if movie['rated_time_ago'] %}
-                                <p class="is-size-7 has-text-link mb-2">{{ movie['rated_time_ago'] }}</p>
-                                {% endif %}
-                                <div class="node-bar small">
+                                <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or '' }}</p>
+                                <div class="node-bar line-nodes">
                                     {% for rate in range(1, 11) %}
                                     <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
                                     {% endfor %}
@@ -142,18 +137,15 @@
                         <h2 class="title is-4 mb-1">Liked with Similar Items</h2>
                         <p class="has-text-grey">{{ likes_similar_message }}</p>
                     </div>
-                    <div class="movie-stack">
+                    <div class="movie-stack" id="similar-movie-stack">
                         {% for movie in likes_similars %}
-                        <div class="movie-card">
+                        <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
                             <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
-                                <p class="is-size-7 mb-1">{{ movie['release_date'] }}</p>
-                                <p class="is-size-7 mb-1">{{ movie['genres'] | join(', ') }}</p>
-                                {% if movie['rated_time_ago'] %}
-                                <p class="is-size-7 has-text-link mb-2">{{ movie['rated_time_ago'] }}</p>
-                                {% endif %}
-                                <div class="node-bar small">
+                                <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or '' }}</p>
+                                <div class="node-bar line-nodes">
                                     {% for rate in range(1, 11) %}
                                     <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
                                     {% endfor %}
@@ -171,18 +163,15 @@
                         <h2 class="title is-4 mb-1">Liked</h2>
                         <p class="has-text-grey">Movies you marked highly.</p>
                     </div>
-                    <div class="movie-stack">
+                    <div class="movie-stack" id="liked-movie-stack">
                         {% for movie in likes %}
-                        <div class="movie-card">
+                        <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
                             <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
-                                <p class="is-size-7 mb-1">{{ movie['release_date'] }}</p>
-                                <p class="is-size-7 mb-1">{{ movie['genres'] | join(', ') }}</p>
-                                {% if movie['rated_time_ago'] %}
-                                <p class="is-size-7 has-text-link mb-2">{{ movie['rated_time_ago'] }}</p>
-                                {% endif %}
-                                <div class="node-bar small">
+                                <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or '' }}</p>
+                                <div class="node-bar line-nodes">
                                     {% for rate in range(1, 11) %}
                                     <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
                                     {% endfor %}
@@ -190,7 +179,7 @@
                             </div>
                         </div>
                         {% else %}
-                        <p class="has-text-grey p-4">No liked movies yet. Ratings 8-10 appear here.</p>
+                        <p class="has-text-grey p-4">No liked movies yet.</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -206,22 +195,43 @@
     </section>
 </div>
 
+<script id="index-bootstrap-data" type="application/json">
+{{ {
+    'setupComplete': setup_complete,
+    'userRates': user_rates,
+    'genreScores': user_genre_scores,
+    'genreIds': genres | map(attribute='id') | list
+} | tojson }}
+</script>
+
 <script type="module">
     import {createApp, ref, onMounted} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
 
     const app = createApp({
         setup() {
             const rootElement = document.getElementById('app')
+            const bootstrapElement = document.getElementById('index-bootstrap-data')
+            let bootstrapData = {}
+            try {
+                bootstrapData = JSON.parse(bootstrapElement?.textContent || '{}')
+            } catch (_err) {
+                bootstrapData = {}
+            }
             const isLoggedIn = ref(rootElement?.dataset.loggedIn === 'true')
             const selectedAlgorithm = ref('{{ selected_algorithm }}')
             const selectedUi = ref('{{ selected_ui }}' || '1')
-            const setupComplete = ref({{ 'true' if setup_complete else 'false' }})
-            const userRates = ref({{ user_rates | tojson }})
+            const setupComplete = ref(Boolean(bootstrapData.setupComplete))
+            const userRates = ref(bootstrapData.userRates || {})
             const originalMoviesSection = ref(null)
-            const genreScores = ref({
-                {% for genre in genres %}
-                '{{ genre['id'] }}': {{ user_genre_scores.get(genre['id'], 0) }},
-                {% endfor %}
+            const genreScores = ref(bootstrapData.genreScores || {})
+            const genreIds = Array.isArray(bootstrapData.genreIds) ? bootstrapData.genreIds : []
+
+            // Keep every genre slider anchored to 0 when there is no saved score.
+            genreIds.forEach((genreId) => {
+                const key = String(genreId)
+                if (genreScores.value[key] === undefined || genreScores.value[key] === null || genreScores.value[key] === '') {
+                    genreScores.value[key] = 0
+                }
             })
 
             function reloadPage() {
@@ -235,6 +245,246 @@
             function readCookie(name) {
                 const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
                 return match ? decodeURIComponent(match[2]) : ''
+            }
+
+            function formatRatedTime(timestampSeconds) {
+                if (!timestampSeconds) {
+                    return ''
+                }
+                const now = Math.floor(Date.now() / 1000)
+                const delta = Math.max(0, now - Number(timestampSeconds))
+                if (delta < 60) {
+                    return 'just rated'
+                }
+                if (delta < 3600) {
+                    return `rated ${Math.floor(delta / 60)} minute(s) ago`
+                }
+                if (delta < 86400) {
+                    return `rated ${Math.floor(delta / 3600)} hour(s) ago`
+                }
+                return `rated ${Math.floor(delta / 86400)} day(s) ago`
+            }
+
+            function ensureRatedTimeInCard(cardElement, timestampSeconds) {
+                if (!cardElement) {
+                    return
+                }
+                const text = formatRatedTime(timestampSeconds)
+                if (!text) {
+                    return
+                }
+                let ratedLine = cardElement.querySelector('.js-rated-time')
+                if (!ratedLine) {
+                    ratedLine = document.createElement('p')
+                    ratedLine.className = 'is-size-7 has-text-link movie-rated-time js-rated-time'
+                    const nodeBar = cardElement.querySelector('.node-bar')
+                    if (nodeBar && nodeBar.parentNode) {
+                        nodeBar.parentNode.insertBefore(ratedLine, nodeBar)
+                    }
+                }
+                ratedLine.textContent = text
+            }
+
+            function bindCardNodeClicks(cardElement, movieId) {
+                const nodes = cardElement.querySelectorAll('.node')
+                nodes.forEach((nodeElement) => {
+                    const parsedRate = Number(nodeElement.textContent || 0)
+                    if (!Number.isInteger(parsedRate) || parsedRate < 1 || parsedRate > 10) {
+                        return
+                    }
+                    nodeElement.addEventListener('click', () => {
+                        saveMovieRating(movieId, parsedRate)
+                    })
+                })
+            }
+
+            function refreshCardNodeState(cardElement, movieId) {
+                if (!cardElement) {
+                    return
+                }
+                const currentRate = getMovieRating(movieId)
+                const nodes = cardElement.querySelectorAll('.node')
+                nodes.forEach((nodeElement) => {
+                    const parsedRate = Number(nodeElement.textContent || 0)
+                    if (parsedRate === currentRate) {
+                        nodeElement.classList.add('is-active')
+                    } else {
+                        nodeElement.classList.remove('is-active')
+                    }
+                })
+            }
+
+            function createMovieCardElement(movie) {
+                const cardElement = document.createElement('div')
+                const movieId = Number(movie.movieId)
+                cardElement.className = 'movie-card'
+                cardElement.dataset.movieId = String(movieId)
+
+                const posterElement = document.createElement('img')
+                posterElement.className = 'movie-poster'
+                posterElement.src = movie.cover_url || 'https://placehold.co/480x640?text=No+Cover'
+                posterElement.alt = 'movie cover'
+                posterElement.onerror = () => {
+                    posterElement.src = 'https://placehold.co/480x640?text=No+Cover'
+                }
+                cardElement.appendChild(posterElement)
+
+                const copyElement = document.createElement('div')
+                copyElement.className = 'movie-copy'
+
+                const titleElement = document.createElement('p')
+                titleElement.className = 'has-text-weight-semibold movie-title'
+                titleElement.textContent = movie.title || ''
+                copyElement.appendChild(titleElement)
+
+                const genresElement = document.createElement('p')
+                genresElement.className = 'is-size-7 movie-genres'
+                genresElement.textContent = Array.isArray(movie.genres) ? movie.genres.join(', ') : ''
+                copyElement.appendChild(genresElement)
+
+                const ratedElement = document.createElement('p')
+                ratedElement.className = 'is-size-7 has-text-link movie-rated-time js-rated-time'
+                ratedElement.textContent = movie.rated_time_ago || ''
+                copyElement.appendChild(ratedElement)
+
+                const nodeBarElement = document.createElement('div')
+                nodeBarElement.className = 'node-bar line-nodes'
+                for (let rate = 1; rate <= 10; rate += 1) {
+                    const nodeElement = document.createElement('button')
+                    nodeElement.type = 'button'
+                    nodeElement.className = 'node'
+                    nodeElement.textContent = String(rate)
+                    if (getMovieRating(movieId) === rate) {
+                        nodeElement.classList.add('is-active')
+                    }
+                    nodeElement.addEventListener('click', () => saveMovieRating(movieId, rate))
+                    nodeBarElement.appendChild(nodeElement)
+                }
+                copyElement.appendChild(nodeBarElement)
+
+                cardElement.appendChild(copyElement)
+                return cardElement
+            }
+
+            function renderMovieStack(stackId, moviesList, emptyText) {
+                const stackElement = document.getElementById(stackId)
+                if (!stackElement) {
+                    return
+                }
+                stackElement.innerHTML = ''
+                if (!Array.isArray(moviesList) || moviesList.length === 0) {
+                    const messageElement = document.createElement('p')
+                    messageElement.className = 'has-text-grey p-4'
+                    messageElement.textContent = emptyText
+                    stackElement.appendChild(messageElement)
+                    return
+                }
+                moviesList.forEach((movie) => {
+                    stackElement.appendChild(createMovieCardElement(movie))
+                })
+            }
+
+            async function refreshComputedSections() {
+                if (!setupComplete.value) {
+                    return
+                }
+                const userGenres = Object.keys(genreScores.value)
+                    .filter((genreId) => Number(genreScores.value[genreId] || 0) > 0)
+
+                try {
+                    const response = await fetch('/api/home/sections', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_rates: userRates.value,
+                            user_genres: userGenres,
+                            selected_algorithm: selectedAlgorithm.value
+                        })
+                    })
+                    if (!response.ok) {
+                        return
+                    }
+                    const payload = await response.json()
+                    renderMovieStack('genre-movie-stack', payload.default_genres_movies || [], 'No movies available.')
+                    renderMovieStack('recommended-movie-stack', payload.recommendations || [], 'No recommendations yet.')
+                    renderMovieStack('similar-movie-stack', payload.likes_similars || [], 'No similar items yet.')
+                    renderMovieStack('liked-movie-stack', payload.likes || [], 'No liked movies yet. Ratings 8-10 appear here.')
+                } catch (_err) {
+                    // Ignore refresh errors and keep local state.
+                }
+            }
+
+            function syncLikedSection(changedMovieId, timestampSeconds) {
+                const likedStack = document.getElementById('liked-movie-stack')
+                if (!likedStack) {
+                    return
+                }
+
+                const likedIds = []
+                userRates.value.forEach((record) => {
+                    const parts = record.split('|')
+                    if (parts.length < 3) {
+                        return
+                    }
+                    const movieId = Number(parts[1])
+                    const rating = Number(parts[2])
+                    if (rating >= 8 && Number.isInteger(movieId)) {
+                        likedIds.push(movieId)
+                    }
+                })
+
+                const uniqueLikedIds = Array.from(new Set(likedIds))
+
+                Array.from(likedStack.querySelectorAll('.movie-card[data-movie-id]')).forEach((cardElement) => {
+                    const movieId = Number(cardElement.dataset.movieId)
+                    if (!uniqueLikedIds.includes(movieId)) {
+                        cardElement.remove()
+                    }
+                })
+
+                uniqueLikedIds.forEach((movieId) => {
+                    let likedCard = likedStack.querySelector(`.movie-card[data-movie-id="${movieId}"]`)
+                    if (!likedCard) {
+                        const sourceCard = Array.from(document.querySelectorAll('.movie-card[data-movie-id]'))
+                            .find((cardElement) => {
+                                const sameMovie = Number(cardElement.dataset.movieId) === movieId
+                                const isInLiked = cardElement.closest('#liked-movie-stack')
+                                return sameMovie && !isInLiked
+                            })
+                        if (sourceCard) {
+                            likedCard = sourceCard.cloneNode(true)
+                            likedCard.dataset.movieId = String(movieId)
+                            bindCardNodeClicks(likedCard, movieId)
+                            likedStack.prepend(likedCard)
+                        }
+                    }
+
+                    if (likedCard) {
+                        const rateRecord = userRates.value.find((record) => Number(record.split('|')[1]) === movieId)
+                        const rateTimestamp = rateRecord ? Number(rateRecord.split('|')[3] || 0) : timestampSeconds
+                        refreshCardNodeState(likedCard, movieId)
+                        ensureRatedTimeInCard(likedCard, rateTimestamp)
+                    }
+                })
+
+                const emptyMessage = likedStack.querySelector('.has-text-grey.p-4')
+                if (uniqueLikedIds.length > 0 && emptyMessage) {
+                    emptyMessage.remove()
+                }
+                if (uniqueLikedIds.length === 0 && !likedStack.querySelector('.has-text-grey.p-4')) {
+                    const messageElement = document.createElement('p')
+                    messageElement.className = 'has-text-grey p-4'
+                    messageElement.textContent = 'No liked movies yet. Ratings 8-10 appear here.'
+                    likedStack.appendChild(messageElement)
+                }
+
+                if (changedMovieId) {
+                    const changedCards = document.querySelectorAll(`.movie-card[data-movie-id="${changedMovieId}"]`)
+                    changedCards.forEach((cardElement) => {
+                        refreshCardNodeState(cardElement, changedMovieId)
+                        ensureRatedTimeInCard(cardElement, timestampSeconds)
+                    })
+                }
             }
 
             function saveAlgorithmToLocalStorage(value) {
@@ -476,7 +726,8 @@
                         userRates.value.splice(index, 1)
                         writeCookie('user_rates', userRates.value.join(','))
                         saveRatingsToLocalStorage()
-                        reloadPage()
+                        syncLikedSection(movieId, timestamp)
+                        await refreshComputedSections()
                         return
                     }
                     userRates.value[index] = record
@@ -498,7 +749,8 @@
 
                 writeCookie('user_rates', userRates.value.join(','))
                 saveRatingsToLocalStorage()
-                reloadPage()
+                syncLikedSection(movieId, timestamp)
+                await refreshComputedSections()
             }
 
             function clearMovieRating(movieId) {
@@ -507,7 +759,8 @@
                     userRates.value.splice(index, 1)
                     writeCookie('user_rates', userRates.value.join(','))
                     saveRatingsToLocalStorage()
-                    reloadPage()
+                    syncLikedSection(movieId, Math.floor(Date.now() / 1000))
+                    refreshComputedSections()
                 }
             }
 
@@ -533,13 +786,22 @@
 </script>
 
 <style>
+    #app {
+        max-width: 1320px;
+        margin: 0 auto;
+        width: 100%;
+        padding: 1.5rem;
+    }
+
     .app-hero {
         background: transparent;
     }
 
     .hero-container {
         max-width: none;
-        margin: 0 auto;
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
         padding-left: 0;
         padding-right: 0;
     }
@@ -816,25 +1078,37 @@
 
     .movie-stack {
         display: grid;
-        gap: 1rem;
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     }
 
-    @media screen and (min-width: 1100px) {
-        .original-movie-grid,
-        .movie-stack {
-            grid-template-columns: 1fr 1fr;
-            column-gap: 1rem;
-        }
+    #liked-movie-stack {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(180px, 210px);
+        grid-template-columns: none;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 0.35rem;
+        scrollbar-width: thin;
     }
 
     .movie-card {
         display: flex;
-        gap: 1rem;
-        padding: 1rem;
-        border-radius: 18px;
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+        border-radius: 14px;
         background: var(--card-bg);
         border: 1px solid var(--card-border);
         box-shadow: var(--card-shadow);
+        overflow: hidden;
+    }
+
+    #genre-movie-stack .movie-card,
+    #recommended-movie-stack .movie-card,
+    #similar-movie-stack .movie-card {
+        min-height: 410px;
     }
 
     .movie-card.compact {
@@ -843,22 +1117,89 @@
     }
 
     .movie-poster {
-        width: 92px;
-        flex: 0 0 92px;
-        border-radius: 14px;
-        object-fit: cover;
-        height: auto;
-        aspect-ratio: 3 / 4;
+        width: 100%;
+        border-radius: 0;
+        object-fit: contain;
+        background: #0f172a;
+        height: 260px;
+        aspect-ratio: 2 / 3;
+    }
+
+    #genre-movie-stack .movie-poster,
+    #recommended-movie-stack .movie-poster,
+    #similar-movie-stack .movie-poster {
+        height: 300px;
     }
 
     .movie-copy {
         min-width: 0;
-        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.12rem;
+        padding: 0.52rem 0.6rem 0.6rem;
+        height: 100%;
     }
 
     .movie-title {
-        font-size: 0.95rem;
-        line-height: 1.25rem;
+        font-size: 1.02rem;
+        line-height: 1.2;
+        min-height: 2.3em;
+    }
+
+    .movie-genres {
+        color: var(--text-secondary);
+        min-height: 2.05em;
+        line-height: 1.15;
+        overflow: hidden;
+    }
+
+    .movie-rated-time {
+        height: 1.15rem;
+        line-height: 1.15rem;
+        margin-bottom: 0;
+    }
+
+    .movie-rated-time:empty::before {
+        content: '\00a0';
+    }
+
+    .node-bar.line-nodes {
+        position: relative;
+        justify-content: space-between;
+        gap: 0;
+        flex-wrap: nowrap;
+        margin-top: auto;
+        padding: 0 0.12rem;
+    }
+
+    #liked-movie-stack .movie-card {
+        min-height: 410px;
+    }
+
+    #liked-movie-stack .movie-copy {
+        min-height: 140px;
+    }
+
+    .node-bar.line-nodes::before {
+        content: '';
+        position: absolute;
+        left: 0.45rem;
+        right: 0.45rem;
+        top: 50%;
+        transform: translateY(-50%);
+        height: 2px;
+        border-radius: 999px;
+        background: var(--border-soft);
+        z-index: 0;
+    }
+
+    .node-bar.line-nodes .node {
+        position: relative;
+        z-index: 1;
+        width: 1.2rem;
+        height: 1.2rem;
+        font-size: 0.58rem;
+        border-width: 1px;
     }
 
     .empty-state {
@@ -868,6 +1209,21 @@
     }
 
     @media screen and (max-width: 768px) {
+        #app {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        .app-hero {
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
+        }
+
+        .app-hero .hero-container.container.is-fluid {
+            padding-left: 0.1rem !important;
+            padding-right: 0.1rem !important;
+        }
+
         #original-movies-section {
             padding-left: 0.35rem !important;
             padding-right: 0.35rem !important;
@@ -878,9 +1234,8 @@
             padding-right: 0.1rem;
         }
 
-        .movie-card {
-            flex-direction: column;
-            width: 100%;
+        .movie-stack {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .setup-label {
@@ -889,10 +1244,19 @@
         }
 
         .movie-poster {
-            width: 72px;
-            flex: 0 0 72px;
-            aspect-ratio: 3 / 4;
-            align-self: flex-start;
+            height: 190px;
+        }
+
+        #genre-movie-stack .movie-poster,
+        #recommended-movie-stack .movie-poster,
+        #similar-movie-stack .movie-poster {
+            height: 220px;
+        }
+
+        #genre-movie-stack .movie-card,
+        #recommended-movie-stack .movie-card,
+        #similar-movie-stack .movie-card {
+            min-height: 330px;
         }
 
         .choice-card {
@@ -910,9 +1274,66 @@
         }
 
         .hero-container {
-            padding-left: 0;
-            padding-right: 0;
+            padding-left: 0.1rem;
+            padding-right: 0.1rem;
+        }
+
+        #liked-movie-stack {
+            grid-auto-columns: minmax(168px, 185px);
+        }
+
+        #liked-movie-stack .movie-card {
+            min-height: 330px;
+        }
+
+        #liked-movie-stack .movie-copy {
+            min-height: 118px;
         }
     }
+
+    @media screen and (min-width: 769px) and (max-width: 1087px) {
+        .movie-stack {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media screen and (min-width: 1088px) {
+        .movie-stack {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+
+    @media screen and (max-width: 520px) {
+        .movie-poster {
+            height: 178px;
+        }
+
+        #genre-movie-stack .movie-poster,
+        #recommended-movie-stack .movie-poster,
+        #similar-movie-stack .movie-poster {
+            height: 210px;
+        }
+
+        #genre-movie-stack .movie-card,
+        #recommended-movie-stack .movie-card,
+        #similar-movie-stack .movie-card {
+            min-height: 320px;
+        }
+
+        .node-bar.line-nodes .node {
+            width: 1.08rem;
+            height: 1.08rem;
+            font-size: 0.54rem;
+        }
+
+        #liked-movie-stack .movie-card {
+            min-height: 320px;
+        }
+
+        #liked-movie-stack .movie-copy {
+            min-height: 110px;
+        }
+    }
+
 </style>
 {% endblock %}

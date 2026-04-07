@@ -7,15 +7,14 @@
         <div class="feedback-container">
             <div class="feedback-header">
                 <h1 class="title feedback-title">Your Feedback Matters</h1>
-                <p class="subtitle feedback-subtitle">Help us improve the recommender system by providing your evaluation</p>
+                <p class="subtitle feedback-subtitle">Help us improve the recommender by rating each choice from 1 to 10.</p>
             </div>
 
             <form @submit.prevent="submitFeedback" class="feedback-form">
-                <!-- Q1: Submission Type -->
                 <div class="form-question">
                     <label class="question-title">How would you like to submit feedback? *</label>
                     <div class="choice-grid submission-choice-grid">
-                        <button 
+                        <button
                             type="button"
                             @click="submissionType = 'logged'"
                             :class="['choice-card', { 'is-selected': submissionType === 'logged', 'is-disabled': !isLoggedIn }]"
@@ -27,7 +26,7 @@
                             <span class="disabled-badge" v-if="!isLoggedIn">Sign in to use</span>
                         </button>
 
-                        <button 
+                        <button
                             type="button"
                             @click="submissionType = 'anonymous'"
                             :class="['choice-card', { 'is-selected': submissionType === 'anonymous' }]"
@@ -39,44 +38,43 @@
                     </div>
                 </div>
 
-                <!-- Q2: Participant Information (for logged submissions) -->
-                <div class="form-question" v-if="submissionType === 'logged'">
-                    <label class="question-title">Participant Information *</label>
-                    <p class="question-desc">This information can differ from your account details.</p>
-                    
+                <div class="form-question" v-if="submissionType === 'logged' && isLoggedIn">
+                    <label class="question-title">Your details *</label>
+                    <p class="question-desc">Please confirm the name and contact email for this logged-in submission.</p>
+
                     <div class="form-group">
-                        <label>Full Name</label>
-                        <input 
-                            v-model="voterName"
+                        <label for="feedback-full-name">Full Name</label>
+                        <input
+                            id="feedback-full-name"
+                            v-model.trim="fullName"
                             type="text"
-                            placeholder="Enter your full name"
                             class="input"
-                            required
-                        />
+                            maxlength="120"
+                            autocomplete="name"
+                            placeholder="Enter your full name"
+                        >
                     </div>
 
                     <div class="form-group">
-                        <label>Contact Email Address</label>
-                        <input 
-                            v-model="voterEmail"
+                        <label for="feedback-contact-email">Contact Email</label>
+                        <input
+                            id="feedback-contact-email"
+                            v-model.trim="contactEmail"
                             type="email"
-                            placeholder="Enter your email"
                             class="input"
-                            required
-                        />
+                            maxlength="120"
+                            autocomplete="email"
+                            placeholder="Enter your contact email"
+                        >
                     </div>
                 </div>
 
-                <!-- Q3: Evaluation Type -->
                 <div class="form-question">
                     <label class="question-title">What would you like to evaluate? *</label>
-                    <p class="question-desc" v-if="submissionType === 'logged' && hasSubmittedCurrentType">
-                        <span class="already-submitted-note">You have already submitted this evaluation, but you can submit it again.</span>
-                    </p>
-                    <div class="choice-grid">
-                        <button 
+                    <div class="choice-grid two-col">
+                        <button
                             type="button"
-                            @click="feedbackType = 'algo_ui1'"
+                            @click="selectType('algo_ui1')"
                             :class="['choice-card', { 'is-selected': feedbackType === 'algo_ui1' }]"
                         >
                             <span class="choice-icon">🤖</span>
@@ -84,9 +82,9 @@
                             <span class="choice-desc">Compare algorithms based on UI 1</span>
                         </button>
 
-                        <button 
+                        <button
                             type="button"
-                            @click="feedbackType = 'algo_ui2'"
+                            @click="selectType('algo_ui2')"
                             :class="['choice-card', { 'is-selected': feedbackType === 'algo_ui2' }]"
                         >
                             <span class="choice-icon">🤖</span>
@@ -94,9 +92,9 @@
                             <span class="choice-desc">Compare algorithms based on UI 2</span>
                         </button>
 
-                        <button 
+                        <button
                             type="button"
-                            @click="feedbackType = 'ui_algo1'"
+                            @click="selectType('ui_algo1')"
                             :class="['choice-card', { 'is-selected': feedbackType === 'ui_algo1' }]"
                         >
                             <span class="choice-icon">🎨</span>
@@ -104,9 +102,9 @@
                             <span class="choice-desc">Compare UI modes based on Algorithm 1</span>
                         </button>
 
-                        <button 
+                        <button
                             type="button"
-                            @click="feedbackType = 'ui_algo2'"
+                            @click="selectType('ui_algo2')"
                             :class="['choice-card', { 'is-selected': feedbackType === 'ui_algo2' }]"
                         >
                             <span class="choice-icon">🎨</span>
@@ -114,68 +112,46 @@
                             <span class="choice-desc">Compare UI modes based on Algorithm 2</span>
                         </button>
                     </div>
+                    <p class="question-desc" v-if="submissionType === 'logged' && hasSubmittedCurrentType">
+                        <span class="already-submitted-note">You have already submitted this evaluation, but you can submit it again.</span>
+                    </p>
                 </div>
 
-                <!-- Q4: Vote -->
                 <div class="form-question" v-if="feedbackType">
-                    <!-- Algo Evaluation -->
-                    <div v-if="isAlgorithmFeedback">
-                        <label class="question-title">
-                            Which algorithm provides better recommendations? *
-                            <span class="evaluation-context">(Evaluated on [[ getUiContext ]])</span>
-                        </label>
+                    <label class="question-title">Rate each option from 1 to 10 *</label>
+                    <p class="question-desc">[[ currentPair.context ]]</p>
 
-                        <div class="vote-options">
-                            <button 
+                    <div class="rating-line-block">
+                        <h3 class="rating-title">[[ currentPair.optionALabel ]]</h3>
+                        <div class="node-track">
+                            <button
                                 type="button"
-                                @click="voteChoice = 'algo1'"
-                                :class="['vote-btn', 'vote-algo1', { 'is-selected': voteChoice === 'algo1' }]"
-                            >
-                                <span class="vote-label">Algo 1</span>
-                                <span class="vote-desc">Factorization Machine</span>
-                            </button>
-
-                            <button 
-                                type="button"
-                                @click="voteChoice = 'algo2'"
-                                :class="['vote-btn', 'vote-algo2', { 'is-selected': voteChoice === 'algo2' }]"
-                            >
-                                <span class="vote-label">Algo 2</span>
-                                <span class="vote-desc">Self-Attentive Sequential Recommendation</span>
-                            </button>
+                                v-for="score in scores"
+                                :key="'a-' + score"
+                                class="score-node"
+                                :class="{ 'is-active': ratingOptionA === score }"
+                                @click="ratingOptionA = score"
+                            >[[ score ]]</button>
                         </div>
+                        <p class="score-hint">Selected: [[ ratingOptionA || '-' ]]</p>
                     </div>
 
-                    <!-- UI Evaluation -->
-                    <div v-if="isUiFeedback">
-                        <label class="question-title">
-                            Which UI do you prefer? *
-                            <span class="evaluation-context">(Evaluated with [[ getAlgorithmContext ]])</span>
-                        </label>
-
-                        <div class="vote-options">
-                            <button 
+                    <div class="rating-line-block">
+                        <h3 class="rating-title">[[ currentPair.optionBLabel ]]</h3>
+                        <div class="node-track">
+                            <button
                                 type="button"
-                                @click="voteChoice = 'ui1'"
-                                :class="['vote-btn', 'vote-ui1', { 'is-selected': voteChoice === 'ui1' }]"
-                            >
-                                <span class="vote-label">UI 1</span>
-                                <span class="vote-desc">Dark Mode</span>
-                            </button>
-
-                            <button 
-                                type="button"
-                                @click="voteChoice = 'ui2'"
-                                :class="['vote-btn', 'vote-ui2', { 'is-selected': voteChoice === 'ui2' }]"
-                            >
-                                <span class="vote-label">UI 2</span>
-                                <span class="vote-desc">Light Mode</span>
-                            </button>
+                                v-for="score in scores"
+                                :key="'b-' + score"
+                                class="score-node"
+                                :class="{ 'is-active': ratingOptionB === score }"
+                                @click="ratingOptionB = score"
+                            >[[ score ]]</button>
                         </div>
+                        <p class="score-hint">Selected: [[ ratingOptionB || '-' ]]</p>
                     </div>
                 </div>
 
-                <!-- Optional Text Feedback -->
                 <div class="form-question">
                     <label class="question-title">Additional comments (optional)</label>
                     <div class="form-group">
@@ -189,24 +165,8 @@
                     </div>
                 </div>
 
-                <!-- Consent Checkbox (for logged users) -->
-                <div class="form-question" v-if="submissionType === 'logged'">
-                    <label class="consent-checkbox">
-                        <input 
-                            type="checkbox"
-                            v-model="consentAgreed"
-                        />
-                        <span>
-                            I understand that the feedback and demographic information provided from me 
-                            will be used for the improvement of the system recommendation of this website 
-                            based on the project of COMP4135.
-                        </span>
-                    </label>
-                </div>
-
-                <!-- Submit Button -->
                 <div class="form-submit">
-                    <button 
+                    <button
                         type="submit"
                         :disabled="!canSubmit"
                         :class="['button', 'is-primary', 'submit-btn', { 'is-loading': isSubmitting }]"
@@ -217,14 +177,13 @@
 
                 <p v-if="statusMessage" :class="['submit-status', statusType]">[[ statusMessage ]]</p>
             </form>
-
         </div>
     </div>
 </main>
 
 <style>
     .feedback-container {
-        max-width: 800px;
+        max-width: 860px;
         margin: 0 auto;
         padding: 2rem 1rem;
     }
@@ -279,20 +238,15 @@
         font-size: 0.95rem;
     }
 
-    .evaluation-context {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        font-weight: 400;
-        display: block;
-        margin-top: 0.3rem;
-    }
-
-    /* Choice Grid */
     .choice-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 1rem;
-        margin: 1.5rem 0;
+        margin: 1.2rem 0;
+    }
+
+    .choice-grid.two-col {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .choice-card {
@@ -300,7 +254,7 @@
         flex-direction: column;
         align-items: center;
         gap: 0.75rem;
-        padding: 1.5rem;
+        padding: 1.2rem;
         background: var(--bg-muted);
         border: 2px solid var(--border-soft);
         border-radius: 12px;
@@ -308,7 +262,7 @@
         transition: all 0.2s ease;
         color: var(--text-primary);
         position: relative;
-        font-size: 0.95rem;
+        text-align: center;
     }
 
     .choice-card:hover:not(:disabled) {
@@ -323,9 +277,10 @@
         color: #ffffff;
     }
 
-    .app-body.ui-dark .choice-card,
-    .app-body.ui-dark .vote-btn {
-        background: #0f172a;
+    .choice-card.is-selected .choice-label,
+    .choice-card.is-selected .choice-desc,
+    .choice-card.is-selected .choice-icon {
+        color: #ffffff;
     }
 
     .choice-card.is-disabled {
@@ -333,76 +288,20 @@
         cursor: not-allowed;
     }
 
-    .choice-card.is-disabled:hover {
-        transform: none;
-        border-color: var(--border-soft);
-        box-shadow: none;
-    }
-
     .choice-icon {
-        font-size: 2rem;
+        font-size: 1.8rem;
+        line-height: 1;
     }
 
     .choice-label {
-        font-weight: 600;
+        font-weight: 700;
         font-size: 1rem;
-    }
-
-    /* UI2 Unselected Buttons - Light background with dark text and frame */
-    .app-body.ui-light .choice-card {
-        background: #ffffff;
-        border-color: #dbe2ea;
-        color: #334155;
-    }
-
-    .app-body.ui-light .choice-card.is-selected {
-        background: #111827;
-        border-color: #111827;
-        color: #ffffff;
-    }
-
-    .app-body.ui-light .choice-card .choice-label,
-    .app-body.ui-light .choice-card .choice-desc {
-        color: #334155;
-    }
-
-    .app-body.ui-light .choice-card.is-selected .choice-label,
-    .app-body.ui-light .choice-card.is-selected .choice-desc {
-        color: #ffffff;
-    }
-
-    .app-body.ui-light .choice-card.is-disabled {
-        background: #f8fafc;
-        border-color: #dbe2ea;
-        color: #94a3b8;
-    }
-
-    /* UI2 Vote Buttons */
-    .app-body.ui-light .vote-btn {
-        background: #ffffff;
-        border-color: #dbe2ea;
-        color: #334155;
-    }
-
-    .app-body.ui-light .vote-btn.is-selected {
-        background: #111827;
-        border-color: #111827;
-        color: #ffffff;
-    }
-
-    .app-body.ui-light .vote-btn .vote-label,
-    .app-body.ui-light .vote-btn .vote-desc {
-        color: #334155;
-    }
-
-    .app-body.ui-light .vote-btn.is-selected .vote-label,
-    .app-body.ui-light .vote-btn.is-selected .vote-desc {
-        color: #ffffff;
     }
 
     .choice-desc {
         font-size: 0.85rem;
-        opacity: 0.8;
+        opacity: 0.85;
+        line-height: 1.35;
     }
 
     .disabled-badge {
@@ -417,7 +316,28 @@
         font-weight: 700;
     }
 
-    /* Form Groups */
+    .app-body.ui-light .choice-card {
+        background: #ffffff;
+        border-color: #dbe2ea;
+        color: #334155;
+    }
+
+    .app-body.ui-light .choice-card.is-selected {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
+
+    .app-body.ui-light .choice-card.is-selected .choice-label,
+    .app-body.ui-light .choice-card.is-selected .choice-desc,
+    .app-body.ui-light .choice-card.is-selected .choice-icon {
+        color: #ffffff;
+    }
+
+    .app-body.ui-light .node-track::before {
+        background: #94a3b8;
+    }
+
     .form-group {
         margin-bottom: 1rem;
     }
@@ -446,10 +366,92 @@
         min-height: 110px;
     }
 
-    .form-group input:focus {
-        outline: none;
-        border-color: #2d5aa3;
-        box-shadow: 0 0 0 3px rgba(45, 90, 163, 0.1);
+    .rating-line-block {
+        margin-top: 0.95rem;
+    }
+
+    .rating-title {
+        margin: 0 0 0.7rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .node-track {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.1rem 0.55rem;
+    }
+
+    .node-track::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 3px;
+        transform: translateY(-50%);
+        background: #334155;
+        border-radius: 999px;
+    }
+
+    .score-node {
+        position: relative;
+        z-index: 1;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid #334155;
+        background: #111a2e;
+        color: #e2e8f0;
+        padding: 0;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.68rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .score-node.is-active {
+        background: #1d4ed8;
+        color: #ffffff;
+        border-color: #1d4ed8;
+        transform: scale(1.08);
+    }
+
+    .app-body.ui-light .score-node {
+        background: #e2e8f0;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
+
+    .app-body.ui-light .score-node.is-active {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
+
+    .score-hint {
+        margin-top: 0.6rem;
+        margin-bottom: 0;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .form-submit {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .submit-btn {
+        min-width: 200px;
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
     }
 
     .submit-status {
@@ -465,7 +467,7 @@
 
     .app-body.ui-light .submit-status.success,
     .app-body.ui-light .already-submitted-note {
-        color: #166534 !important;
+        color: #00a63e !important;
     }
 
     .already-submitted-note {
@@ -477,138 +479,23 @@
         color: #ef4444;
     }
 
-    /* Voting Options */
-    .vote-options {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 1rem;
-        margin: 1.5rem 0;
-    }
-
-    .vote-btn {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 1.5rem;
-        background: var(--bg-muted);
-        border: 2px solid var(--border-soft);
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        color: var(--text-primary);
-    }
-
-    .vote-btn:hover {
-        transform: translateY(-2px);
-        border-color: #2d5aa3;
-    }
-
-    .vote-btn.is-selected {
-        background: #2d5aa3;
-        border-color: #2d5aa3;
-        color: #ffffff;
-    }
-
-    .vote-label {
-        font-weight: 700;
-        font-size: 1rem;
-    }
-
-    .vote-desc {
-        font-size: 0.9rem;
-        opacity: 0.8;
-    }
-
-    /* Consent */
-    .consent-checkbox {
-        display: flex;
-        align-items: flex-start;
-        gap: 1rem;
-        cursor: pointer;
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        padding: 1rem;
-        background: rgba(45, 90, 163, 0.12);
-        border: 1px solid rgba(45, 90, 163, 0.28);
-        border-radius: 8px;
-    }
-
-    .consent-checkbox input {
-        width: 20px;
-        height: 20px;
-        margin-top: 2px;
-        cursor: pointer;
-        flex-shrink: 0;
-    }
-
-    /* Submit */
-    .form-submit {
-        margin-top: 2rem;
-        display: flex;
-        justify-content: center;
-    }
-
-    .submit-btn {
-        min-width: 200px;
-        padding: 0.8rem 1.5rem;
-        font-size: 1rem;
-        font-weight: 600;
-    }
-
-    .submit-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    /* Button Styles */
-    .button {
-        padding: 0.8rem 1.5rem;
-        border-radius: 10px;
-        font-weight: 500;
-        border: 1px solid var(--chip-border);
-        background: var(--chip-bg);
-        color: var(--chip-text);
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-block;
-    }
-
-    .button:hover:not(:disabled) {
-        transform: translateY(-1px);
-        border-color: #2d5aa3;
-    }
-
-    .button.is-primary {
-        background: #2d5aa3;
-        color: #ffffff;
-        border-color: #2d5aa3;
-    }
-
-    .button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
     @media (max-width: 768px) {
         .feedback-container {
-            padding: 1rem 0.5rem;
+            padding: 1rem 0.35rem;
         }
 
         .feedback-form {
-            padding: 1.5rem;
+            padding: 1.15rem;
         }
 
-        .choice-grid {
+        .choice-grid.two-col {
             grid-template-columns: 1fr;
         }
 
-        .vote-options {
-            grid-template-columns: 1fr;
-        }
-
-        .form-submit {
-            padding: 0 1rem;
+        .score-node {
+            width: 22px;
+            height: 22px;
+            font-size: 0.62rem;
         }
     }
 </style>
@@ -623,47 +510,70 @@ const app = createApp({
         return {
             isLoggedIn: feedbackRoot?.dataset.loggedIn === 'true',
             submissionType: feedbackRoot?.dataset.defaultSubmission || 'anonymous',
-            voterName: '',
-            voterEmail: '',
+            fullName: '',
+            contactEmail: '',
             feedbackType: null,
             submittedTypes: [],
-            voteChoice: null,
-            consentAgreed: false,
+            ratingOptionA: null,
+            ratingOptionB: null,
             feedbackText: '',
             isSubmitting: false,
             statusMessage: '',
-            statusType: 'success'
+            statusType: 'success',
+            scores: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         };
     },
     computed: {
-        isAlgorithmFeedback() {
-            return this.feedbackType && this.feedbackType.startsWith('algo_');
-        },
-        isUiFeedback() {
-            return this.feedbackType && this.feedbackType.startsWith('ui_');
-        },
-        getUiContext() {
-            if (this.feedbackType === 'algo_ui1') return 'UI 1: Dark';
-            if (this.feedbackType === 'algo_ui2') return 'UI 2: Light';
-            return '';
-        },
-        getAlgorithmContext() {
-            if (this.feedbackType === 'ui_algo1') return 'Algorithm 1: Factorization Machine';
-            if (this.feedbackType === 'ui_algo2') return 'Algorithm 2: Self-Attentive Sequential Recommendation';
-            return '';
-        },
         hasSubmittedCurrentType() {
             return this.feedbackType && this.submittedTypes.includes(this.feedbackType);
         },
-        canSubmit() {
-            if (!this.submissionType || !this.feedbackType || !this.voteChoice) return false;
-            if (this.submissionType === 'logged') {
-                return !!(this.voterName && this.voterEmail && this.consentAgreed);
+        currentPair() {
+            if (this.feedbackType === 'algo_ui1') {
+                return {
+                    optionALabel: 'Algo 1 (Factorization Machine)',
+                    optionBLabel: 'Algo 2 (Self-Attentive Sequential Recommendation)',
+                    context: 'Algorithm Evaluation based on UI 1'
+                };
             }
-            return true;
+            if (this.feedbackType === 'algo_ui2') {
+                return {
+                    optionALabel: 'Algo 1 (Factorization Machine)',
+                    optionBLabel: 'Algo 2 (Self-Attentive Sequential Recommendation)',
+                    context: 'Algorithm Evaluation based on UI 2'
+                };
+            }
+            if (this.feedbackType === 'ui_algo1') {
+                return {
+                    optionALabel: 'UI 1 (Dark Mode)',
+                    optionBLabel: 'UI 2 (Light Mode)',
+                    context: 'User Interface Evaluation based on Algorithm 1'
+                };
+            }
+            if (this.feedbackType === 'ui_algo2') {
+                return {
+                    optionALabel: 'UI 1 (Dark Mode)',
+                    optionBLabel: 'UI 2 (Light Mode)',
+                    context: 'User Interface Evaluation based on Algorithm 2'
+                };
+            }
+            return {
+                optionALabel: 'Option A',
+                optionBLabel: 'Option B',
+                context: ''
+            };
+        },
+        canSubmit() {
+            const hasScores = Number.isInteger(this.ratingOptionA) && Number.isInteger(this.ratingOptionB);
+            const hasContactDetails = this.submissionType !== 'logged' || (this.fullName.trim() && this.contactEmail.trim());
+            return !!(this.submissionType && this.feedbackType && hasScores && hasContactDetails);
         }
     },
     methods: {
+        selectType(type) {
+            this.feedbackType = type;
+            this.ratingOptionA = null;
+            this.ratingOptionB = null;
+        },
         async loadPrefill() {
             if (!this.isLoggedIn) {
                 return;
@@ -674,9 +584,10 @@ const app = createApp({
                     return;
                 }
                 const data = await response.json();
-                this.voterName = data.defaults?.voter_name || '';
-                this.voterEmail = data.defaults?.voter_email || '';
                 this.submittedTypes = data.submitted_types || [];
+                const defaults = data.defaults || {};
+                this.fullName = defaults.full_name || this.fullName || '';
+                this.contactEmail = defaults.contact_email || this.contactEmail || '';
             } catch (_err) {
                 // Ignore prefill fetch errors.
             }
@@ -689,16 +600,13 @@ const app = createApp({
             try {
                 const payload = {
                     submission_type: this.submissionType,
+                    full_name: this.submissionType === 'logged' ? this.fullName : null,
+                    contact_email: this.submissionType === 'logged' ? this.contactEmail : null,
                     feedback_type: this.feedbackType,
-                    vote_choice: this.voteChoice,
+                    rating_option_a: this.ratingOptionA,
+                    rating_option_b: this.ratingOptionB,
                     feedback_text: this.feedbackText || null
                 };
-
-                if (this.submissionType === 'logged') {
-                    payload.voter_name = this.voterName;
-                    payload.voter_email = this.voterEmail;
-                    payload.consent_agreed = this.consentAgreed;
-                }
 
                 const response = await fetch('/api/feedback', {
                     method: 'POST',
@@ -707,16 +615,14 @@ const app = createApp({
                 });
 
                 if (!response.ok) throw new Error('Failed to submit feedback');
-                const result = await response.json();
-                this.statusMessage = 'Submitted successfully! Thanks for your feedback.';
+                this.statusMessage = 'Submitted successfully. Thanks for your feedback.';
                 this.statusType = 'success';
                 if (this.feedbackType && !this.submittedTypes.includes(this.feedbackType)) {
                     this.submittedTypes.push(this.feedbackType);
                 }
                 this.resetForm();
-            } catch (error) {
-                console.error('Error:', error);
-                this.statusMessage = 'Failed to submit feedback. Please check your selections and try again.';
+            } catch (_error) {
+                this.statusMessage = 'Failed to submit feedback. Please check your inputs and try again.';
                 this.statusType = 'error';
             } finally {
                 this.isSubmitting = false;
@@ -725,13 +631,16 @@ const app = createApp({
 
         resetForm() {
             this.submissionType = this.isLoggedIn ? 'logged' : 'anonymous';
-            this.voterName = '';
-            this.voterEmail = '';
+            if (this.submissionType === 'logged') {
+                this.loadPrefill();
+            } else {
+                this.fullName = '';
+                this.contactEmail = '';
+            }
             this.feedbackType = null;
-            this.voteChoice = null;
-            this.consentAgreed = false;
+            this.ratingOptionA = null;
+            this.ratingOptionB = null;
             this.feedbackText = '';
-            this.loadPrefill();
         }
     },
     mounted() {

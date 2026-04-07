@@ -1,3 +1,22 @@
+## Add the recommendation algorithm
+The recommendation code is wired through `main.py`, but the actual algorithm work should be done in the template modules first.
+
+Files to edit:
+- `./flaskr/algo1.py` for FM
+- `./flaskr/algo2.py` for SASRec
+- `./flaskr/main.py` for wiring the final algorithm into the app
+
+`algo1.py` and `algo2.py` are templates. When each implementation is finished, change the corresponding boolean in `main.py` from `False` to `True`:
+- `algo1_is_done = False` -> `True` when FM is ready
+- `algo2_is_done = False` -> `True` when SASRec is ready
+
+`main.py` already routes requests through these modules, so you only need to turn the flags on after the templates are complete.
+
+Important for algorithm developers:
+- In `algo1.py`, only implement or modify `getRecommendationBy(...)` and `getLikedSimilarBy(...)`.
+- In `algo2.py`, only implement or modify `getRecommendationBy(...)` and `getLikedSimilarBy(...)`.
+- Other functions in those files are helper scaffolds for the default baseline and can be kept as-is unless your implementation needs different helpers.
+
 ## Create an environment
 
 ```
@@ -19,25 +38,6 @@ pip install -r requirements.txt
 ```
 flask --app flaskr run --debug
 ```
-
-## Add the recommendation algorithm
-The recommendation code is wired through `main.py`, but the actual algorithm work should be done in the template modules first.
-
-Files to edit:
-- `./flaskr/algo1.py` for FM
-- `./flaskr/algo2.py` for SASRec
-- `./flaskr/main.py` for wiring the final algorithm into the app
-
-`algo1.py` and `algo2.py` are templates. When each implementation is finished, change the corresponding boolean in `main.py` from `False` to `True`:
-- `algo1 = False` -> `True` when FM is ready
-- `algo2 = False` -> `True` when SASRec is ready
-
-`main.py` already routes requests through these modules, so you only need to turn the flags on after the templates are complete.
-
-Important for algorithm developers:
-- In `algo1.py`, only implement or modify `getRecommendationBy(...)` and `getLikedSimilarBy(...)`.
-- In `algo2.py`, only implement or modify `getRecommendationBy(...)` and `getLikedSimilarBy(...)`.
-- Other functions in those files are helper scaffolds for the default baseline and can be kept as-is unless your implementation needs different helpers.
 
 ## About the Dataset
 The dataset path is: ./flaskr/static/ml_data/

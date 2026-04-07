@@ -7,7 +7,7 @@
     <div class="container">
         <div class="eval-head mb-5">
             <h1 class="title is-3 eval-title">Evaluation</h1>
-            <p class="subtitle is-6 has-text-grey eval-subtitle">Chart data is sourced from feedback records in the database.</p>
+            <p class="subtitle is-6 has-text-grey eval-subtitle">Charts show average scores (1-10) from submitted feedback records.</p>
         </div>
 
         <div class="chart-source-filter mb-4">
@@ -27,18 +27,28 @@
                         <p class="is-size-7 has-text-grey">[[ card.description ]]</p>
                     </div>
 
-                    <div class="chart-wrap">
-                        <div
-                            class="pie-ring"
-                            :class="{ 'is-na': !card.hasData }"
-                            :style="{ '--better-angle': card.betterAngle + 'deg' }"
-                        ></div>
-                        <div class="chart-center" :class="{ 'is-na': !card.hasData }">[[ card.centerText ]]</div>
-                    </div>
+                    <div class="bars-wrap" :class="{ 'is-empty': !card.hasData }">
+                        <div class="bar-row">
+                            <span class="bar-label">[[ card.optionALabel ]]</span>
+                            <div class="bar-track">
+                                <div class="bar-fill a" :style="{ width: (card.hasData ? card.avgA : 0) * 10 + '%' }"></div>
+                            </div>
+                            <span class="bar-value">[[ card.hasData ? card.avgA.toFixed(2) : '-' ]]</span>
+                        </div>
 
-                    <div class="chart-legend" v-if="card.hasData">
-                        <span class="legend-pill"><span class="legend-dot better"></span>[[ card.leftLabel ]]: [[ card.better ]]</span>
-                        <span class="legend-pill"><span class="legend-dot worse"></span>[[ card.rightLabel ]]: [[ card.worse ]]</span>
+                        <div class="bar-row">
+                            <span class="bar-label">[[ card.optionBLabel ]]</span>
+                            <div class="bar-track">
+                                <div class="bar-fill b" :style="{ width: (card.hasData ? card.avgB : 0) * 10 + '%' }"></div>
+                            </div>
+                            <span class="bar-value">[[ card.hasData ? card.avgB.toFixed(2) : '-' ]]</span>
+                        </div>
+
+                        <div class="score-meta">
+                            <span>Responses: [[ card.total ]]</span>
+                            <span>Delta (A-B): [[ card.delta.toFixed(2) ]]</span>
+                            <span>Better A/B/Tie: [[ card.preferA ]]/[[ card.preferB ]]/[[ card.ties ]]</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -47,8 +57,8 @@
         <div class="box mt-5 eval-filters" v-if="isAdmin">
             <div class="table-top">
                 <div>
-                    <h2 class="title is-5 mb-1">Vote Details</h2>
-                    <p class="is-size-7 has-text-grey">Admin-only records from feedback submissions.</p>
+                    <h2 class="title is-5 mb-1">Rating Details</h2>
+                    <p class="is-size-7 has-text-grey">Only logged-in admin users can view this table.</p>
                 </div>
             </div>
 
@@ -78,40 +88,40 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>User ID</th>
+                            <th>Full Name</th>
+                            <th>Contact Email</th>
                             <th>Type</th>
                             <th>Source</th>
-                            <th>Vote</th>
-                            <th>Voter Name</th>
-                            <th>Voter Email</th>
-                            <th>Feedback Text</th>
+                            <th>Option A</th>
+                            <th>Score A</th>
+                            <th>Option B</th>
+                            <th>Score B</th>
                             <th>Created</th>
+                            <th>Comment</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="row in votes" :key="row.id">
                             <td>[[ row.id ]]</td>
-                            <td>[[ row.user_id || 'NULL' ]]</td>
+                            <td>[[ row.full_name || 'NULL' ]]</td>
+                            <td>[[ row.contact_email || 'NULL' ]]</td>
                             <td>[[ renderFeedbackType(row.feedback_type) ]]</td>
                             <td>[[ row.submission_type ]]</td>
-                            <td>[[ renderVoteChoice(row.vote_choice) ]]</td>
-                            <td>[[ row.voter_name || 'NULL' ]]</td>
-                            <td>[[ row.voter_email || 'NULL' ]]</td>
-                            <td>[[ row.feedback_text || 'NULL' ]]</td>
+                            <td>[[ row.option_a_label ]]</td>
+                            <td>[[ row.rating_option_a ]]</td>
+                            <td>[[ row.option_b_label ]]</td>
+                            <td>[[ row.rating_option_b ]]</td>
                             <td>[[ formatTime(row.created_at) ]]</td>
+                            <td>[[ row.feedback_text || 'NULL' ]]</td>
                         </tr>
                         <tr v-if="votes.length === 0">
-                            <td colspan="9" class="has-text-centered has-text-grey py-6">No feedback records found for the current filter.</td>
+                            <td colspan="11" class="has-text-centered has-text-grey py-6">No feedback records found for the current filter.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="box mt-5 eval-filters" v-else>
-            <h2 class="title is-5 mb-1">Vote Details</h2>
-            <p class="is-size-7 has-text-grey">Only logged-in admin users can view this table.</p>
-        </div>
     </div>
 </section>
 
@@ -181,10 +191,6 @@
         gap: 0.9rem;
     }
 
-    .chart-grid-item {
-        min-width: 0;
-    }
-
     .chart-card {
         border-radius: 18px;
         border: 1px solid var(--card-border);
@@ -192,9 +198,6 @@
         box-shadow: var(--card-shadow);
         padding: 1.1rem;
         height: 100%;
-        max-width: none;
-        margin-left: auto;
-        margin-right: auto;
     }
 
     .chart-header {
@@ -202,80 +205,64 @@
         margin-bottom: 1rem;
     }
 
-    .chart-wrap {
-        position: relative;
-        width: 190px;
-        height: 190px;
-        margin: 0 auto;
+    .bars-wrap {
         display: grid;
-        place-items: center;
+        gap: 0.8rem;
     }
 
-    .pie-ring {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        background: conic-gradient(#1d4ed8 0deg var(--better-angle), #ea580c var(--better-angle) 360deg);
-        -webkit-mask: radial-gradient(circle at center, transparent 58%, #000 59%);
-        mask: radial-gradient(circle at center, transparent 58%, #000 59%);
-    }
-
-    .pie-ring.is-na {
-        background: conic-gradient(var(--border-soft) 0deg 360deg);
-    }
-
-    .chart-center {
-        position: absolute;
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: var(--bg-elevated);
+    .bar-row {
         display: grid;
-        place-items: center;
-        font-size: 1.45rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        box-shadow: inset 0 0 0 1px var(--border-soft);
-    }
-
-    .chart-center.is-na {
-        font-size: 1.2rem;
-        color: var(--text-secondary);
-        font-weight: 700;
-    }
-
-    .chart-legend {
-        margin-top: 0.9rem;
-        display: flex;
-        gap: 0.5rem;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .legend-pill {
-        display: inline-flex;
+        grid-template-columns: minmax(140px, 1fr) 3fr 56px;
+        gap: 0.6rem;
         align-items: center;
-        gap: 0.4rem;
-        padding: 0.25rem 0.55rem;
+    }
+
+    .bar-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+    }
+
+    .bar-track {
+        width: 100%;
+        height: 12px;
         border-radius: 999px;
+        background: var(--bg-muted);
         border: 1px solid var(--border-soft);
+        overflow: hidden;
+    }
+
+    .bar-fill {
+        height: 100%;
+        border-radius: 999px;
+    }
+
+    .bar-fill.a {
+        background: #1d4ed8;
+    }
+
+    .bar-fill.b {
+        background: #ea580c;
+    }
+
+    .bar-value {
+        text-align: right;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .score-meta {
+        margin-top: 0.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
         font-size: 0.78rem;
         color: var(--text-secondary);
     }
 
-    .legend-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-
-    .legend-dot.better {
-        background: #1d4ed8;
-    }
-
-    .legend-dot.worse {
-        background: #ea580c;
+    .bars-wrap.is-empty .bar-track {
+        opacity: 0.55;
     }
 
     .eval-filters {
@@ -293,7 +280,6 @@
         display: grid;
         gap: 0.9rem;
         margin-bottom: 1rem;
-        padding: 0;
     }
 
     .filter-row {
@@ -324,7 +310,7 @@
         color: var(--text-primary);
         border-bottom: 1px solid var(--border-soft);
         background: var(--bg-elevated);
-        font-size: 0.8rem;
+        font-size: 0.76rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
@@ -336,78 +322,56 @@
         padding: 0.75rem;
         word-break: break-word;
         white-space: normal;
+        min-width: 130px;
+    }
+
+    .eval-table th:nth-child(1),
+    .eval-table td:nth-child(1) {
+        min-width: 72px;
+    }
+
+    .eval-table th:nth-child(2),
+    .eval-table td:nth-child(2) {
+        min-width: 180px;
     }
 
     .eval-table th:nth-child(3),
     .eval-table td:nth-child(3) {
+        min-width: 240px;
+    }
+
+    .eval-table th:nth-child(10),
+    .eval-table td:nth-child(10) {
         min-width: 190px;
     }
 
-    .eval-table th:nth-child(4),
-    .eval-table td:nth-child(4) {
-        min-width: 120px;
-    }
-
-    .eval-table th:nth-child(5),
-    .eval-table td:nth-child(5) {
-        min-width: 120px;
-    }
-
-    .eval-table th:nth-child(6),
-    .eval-table td:nth-child(6) {
-        min-width: 160px;
-    }
-
-    .eval-table th:nth-child(7),
-    .eval-table td:nth-child(7) {
-        min-width: 180px;
-    }
-
-    .eval-table th:nth-child(8),
-    .eval-table td:nth-child(8) {
-        min-width: 560px;
-        max-width: 600px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-    }
-
-    .eval-table th:nth-child(9),
-    .eval-table td:nth-child(9) {
-        min-width: 160px;
-    }
-
-    .eval-table tr:last-child td {
-        border-bottom: none;
+    .eval-table th:nth-child(11),
+    .eval-table td:nth-child(11) {
+        min-width: 520px;
     }
 
     @media (max-width: 768px) {
-        .eval-table th:nth-child(3),
-        .eval-table td:nth-child(3),
-        .eval-table th:nth-child(4),
-        .eval-table td:nth-child(4),
-        .eval-table th:nth-child(5),
-        .eval-table td:nth-child(5),
-        .eval-table th:nth-child(6),
-        .eval-table td:nth-child(6),
-        .eval-table th:nth-child(7),
-        .eval-table td:nth-child(7),
-        .eval-table th:nth-child(9),
-        .eval-table td:nth-child(9) {
-            min-width: 140px;
-        }
-
-        .eval-table th:nth-child(8),
-        .eval-table td:nth-child(8) {
-            min-width: 420px;
-        }
-
         .chart-grid {
             grid-template-columns: 1fr;
+        }
+
+        .bar-row {
+            grid-template-columns: 1fr;
+            gap: 0.35rem;
+        }
+
+        .bar-value {
+            text-align: left;
         }
 
         .filter-row {
             grid-template-columns: 1fr;
             gap: 0.45rem;
+        }
+
+        .eval-table th:nth-child(11),
+        .eval-table td:nth-child(11) {
+            min-width: 320px;
         }
     }
 </style>
@@ -433,43 +397,39 @@ const evalApp = createApp({
                 {
                     key: 'algo_ui1',
                     title: 'Algorithm Evaluation based on UI 1',
-                    description: this.getChartDescription(),
-                    leftLabel: 'Algo 1 (FM)',
-                    rightLabel: 'Algo 2 (SASRec)'
+                    description: this.getChartDescription()
                 },
                 {
                     key: 'algo_ui2',
                     title: 'Algorithm Evaluation based on UI 2',
-                    description: this.getChartDescription(),
-                    leftLabel: 'Algo 1 (FM)',
-                    rightLabel: 'Algo 2 (SASRec)'
+                    description: this.getChartDescription()
                 },
                 {
                     key: 'ui_algo1',
-                    title: 'UI Evaluation based on Algorithm 1',
-                    description: this.getChartDescription(),
-                    leftLabel: 'UI 1',
-                    rightLabel: 'UI 2'
+                    title: 'User Interface Evaluation based on Algo 1',
+                    description: this.getChartDescription()
                 },
                 {
                     key: 'ui_algo2',
-                    title: 'UI Evaluation based on Algorithm 2',
-                    description: this.getChartDescription(),
-                    leftLabel: 'UI 1',
-                    rightLabel: 'UI 2'
+                    title: 'User Interface Evaluation based on Algo 2',
+                    description: this.getChartDescription()
                 }
             ];
 
             return defs.map((def) => {
-                const rec = this.summary[def.key] || { better: 0, worse: 0, total: 0, has_data: false };
+                const rec = this.summary[def.key] || {};
                 return {
                     ...def,
-                    better: rec.better || 0,
-                    worse: rec.worse || 0,
                     total: rec.total || 0,
                     hasData: !!rec.has_data,
-                    betterAngle: rec.total ? (rec.better / rec.total) * 360 : 0,
-                    centerText: rec.total ? String(rec.total) : 'N/A'
+                    avgA: Number(rec.avg_a || 0),
+                    avgB: Number(rec.avg_b || 0),
+                    delta: Number(rec.delta || 0),
+                    preferA: rec.prefer_a_count || 0,
+                    preferB: rec.prefer_b_count || 0,
+                    ties: rec.tie_count || 0,
+                    optionALabel: rec.option_a_label || 'Option A',
+                    optionBLabel: rec.option_b_label || 'Option B'
                 };
             });
         }
@@ -482,9 +442,9 @@ const evalApp = createApp({
     },
     methods: {
         getChartDescription() {
-            if (this.sourceFilter === 'logged') return 'Logged user votes only';
-            if (this.sourceFilter === 'anonymous') return 'Anonymous votes only';
-            return 'Logged user and anonymous votes';
+            if (this.sourceFilter === 'logged') return 'Logged user submissions only';
+            if (this.sourceFilter === 'anonymous') return 'Anonymous submissions only';
+            return 'Logged user and anonymous submissions';
         },
         async loadSummary() {
             const res = await fetch(`/api/evaluation/summary?source=${encodeURIComponent(this.sourceFilter)}`);
@@ -520,21 +480,17 @@ const evalApp = createApp({
         },
         renderFeedbackType(type) {
             const names = {
-                algo_ui1: 'Algorithm on UI 1',
-                algo_ui2: 'Algorithm on UI 2',
-                ui_algo1: 'UI on Algorithm 1',
-                ui_algo2: 'UI on Algorithm 2'
+                algo_ui1: 'Algo on UI 1',
+                algo_ui2: 'Algo on UI 2',
+                ui_algo1: 'UI on Algo 1',
+                ui_algo2: 'UI on Algo 2'
             };
             return names[type] || type;
         },
-        renderVoteChoice(voteChoice) {
-            const names = {
-                algo1: 'Algo 1 (FM)',
-                algo2: 'Algo 2 (SASRec)',
-                ui1: 'UI 1 (Dark)',
-                ui2: 'UI 2 (Light)'
-            };
-            return names[voteChoice] || voteChoice;
+        computeDelta(row) {
+            const a = Number(row.rating_option_a || 0);
+            const b = Number(row.rating_option_b || 0);
+            return (a - b).toFixed(2);
         },
         formatTime(isoText) {
             if (!isoText) return 'N/A';

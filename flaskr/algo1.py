@@ -2,12 +2,38 @@ import pandas as pd
 from surprise import Reader
 from surprise import KNNWithMeans
 from surprise import Dataset
-from sklearn.metrics.pairwise import cosine_similarity
 
 from .main import normalize_rating_to_legacy_scale
+from .main import item_representation_based_movie_genres
+from .main import build_user_profile
+from .main import generate_recommendation_results
+from .main import is_genre_match
 from .tools.data_tool import ratesFromUser
 
 
+# Section mapping for Algorithm 1 developer:
+# - Movies based on your Genre Ratings -> getMoviesByGenres
+# - Recommended -> getRecommendationBy
+# - Liked with Similar Items -> getLikedSimilarBy
+# - Liked -> get_liked_movie_ids
+
+# - Movies based on your Genre Ratings
+def getMoviesByGenres(user_genres, movies_df, genres_df):
+    """Movies based on your Genre Ratings section."""
+    results = []
+    if len(user_genres) > 0:
+        genres_mask = genres_df['id'].isin([int(gid) for gid in user_genres])
+        user_genres_mask = [1 if has is True else 0 for has in genres_mask]
+        user_genres_df = pd.DataFrame(user_genres_mask, columns=['value'])
+        user_genres_df = pd.concat([user_genres_df, genres_df['name']], axis=1)
+        interested_genres = user_genres_df[user_genres_df['value'] == 1]['name'].tolist()
+        results = movies_df[movies_df['genres'].apply(lambda x: is_genre_match(x, interested_genres))]
+
+    if len(results) > 0:
+        return results.to_dict('records')
+    return results
+
+# - Recommended
 def getRecommendationBy(user_rates, movies_df, rates_df):
     """
     Template algorithm file for Algorithm 1 developer.
@@ -40,7 +66,7 @@ def getRecommendationBy(user_rates, movies_df, rates_df):
         return results.to_dict('records'), 'These movies are recommended based on your ratings.'
     return results, 'No recommendations.'
 
-
+# - Liked with Similar Items
 def getLikedSimilarBy(user_likes, movies_df):
     """
     Template for Algorithm 1 developer to implement liked items similarity.
@@ -66,41 +92,16 @@ def getLikedSimilarBy(user_likes, movies_df):
         return results.to_dict('records'), "The movies are similar to your liked movies."
     return results, "No similar movies found."
 
-
-def item_representation_based_movie_genres(movies_df):
-    """Step 1: Representing items with multi-hot vectors based on genres"""
-    movies_with_genres = movies_df.copy(deep=True)
-    genre_list = []
-    for index, row in movies_df.iterrows():
-        for genre in row['genres']:
-            movies_with_genres.at[index, genre] = 1
-            if genre not in genre_list:
-                genre_list.append(genre)
-
-    movies_with_genres = movies_with_genres.fillna(0)
-    movies_genre_matrix = movies_with_genres[genre_list].to_numpy()
-    
-    return movies_genre_matrix, movies_with_genres, genre_list
-
-
-def build_user_profile(movieIds, item_rep_vector, feature_list, weighted=True, normalized=True):
-    """Step 2: Building user profile from liked movies"""
-    user_movie_rating_df = item_rep_vector[item_rep_vector['movieId'].isin(movieIds)]
-    user_movie_df = user_movie_rating_df[feature_list].mean()
-    user_profile = user_movie_df.T
-    
-    if normalized:
-        user_profile = user_profile / sum(user_profile.values)
-        
-    return user_profile
-
-
-def generate_recommendation_results(user_profile, item_rep_matrix, movies_data, k=12):
-    """Step 3: Predicting user preference for items using cosine similarity"""
-    u_v = user_profile.values
-    u_v_matrix = [u_v]
-    recommendation_table = cosine_similarity(u_v_matrix, item_rep_matrix)
-    recommendation_table_df = movies_data.copy(deep=True)
-    recommendation_table_df['similarity'] = recommendation_table[0]
-    rec_result = recommendation_table_df.sort_values(by=['similarity'], ascending=False)[:k]
-    return rec_result
+# - Liked
+def get_liked_movie_ids(user_rates):
+    """Liked section source IDs (ratings >= 8 by current policy)."""
+    liked_ids = []
+    for rate in user_rates:
+        parts = rate.split('|')
+        if len(parts) < 3:
+            continue
+        movie_id = int(parts[1])
+        rating = int(parts[2])
+        if rating >= 8:
+            liked_ids.append(movie_id)
+    return liked_ids

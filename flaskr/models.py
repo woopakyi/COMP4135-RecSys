@@ -76,19 +76,19 @@ class Feedback(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # NULL if anonymous
+
+    # Contact details for logged-in submissions
+    full_name = db.Column(db.String(120), nullable=True)
+    contact_email = db.Column(db.String(120), nullable=True)
     
     # Submission details
     submission_type = db.Column(db.String(10), nullable=False)  # 'logged' or 'anonymous'
-    voter_name = db.Column(db.String(120), nullable=True)  # Full name (may differ from account)
-    voter_email = db.Column(db.String(120), nullable=True)  # Email (may differ from account)
     
-    # Feedback type and vote
-    feedback_type = db.Column(db.String(20), nullable=False)  # 'algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2'
-    vote_choice = db.Column(db.String(8), nullable=False)  # 'algo1', 'algo2', 'ui1', 'ui2'
+    # Feedback type and paired ratings
+    feedback_type = db.Column(db.String(20), nullable=False)  # 'algorithm_eval', 'ui_eval'
+    rating_option_a = db.Column(db.Integer, nullable=False)  # 1-10
+    rating_option_b = db.Column(db.Integer, nullable=False)  # 1-10
     feedback_text = db.Column(db.Text, nullable=True)
-    
-    # Consent
-    consent_agreed = db.Column(db.Boolean, default=False)
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

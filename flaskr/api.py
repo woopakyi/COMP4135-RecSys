@@ -11,6 +11,38 @@ import json
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
+FEEDBACK_TYPE_CONFIG = {
+    'algo_ui1': {
+        'label': 'Algorithm Evaluation based on UI 1',
+        'option_a_key': 'algo1',
+        'option_a_label': 'Algo 1 (FM)',
+        'option_b_key': 'algo2',
+        'option_b_label': 'Algo 2 (SASRec)',
+    },
+    'algo_ui2': {
+        'label': 'Algorithm Evaluation based on UI 2',
+        'option_a_key': 'algo1',
+        'option_a_label': 'Algo 1 (FM)',
+        'option_b_key': 'algo2',
+        'option_b_label': 'Algo 2 (SASRec)',
+    },
+    'ui_algo1': {
+        'label': 'User Interface Evaluation based on Algo 1',
+        'option_a_key': 'ui1',
+        'option_a_label': 'UI 1 (Dark)',
+        'option_b_key': 'ui2',
+        'option_b_label': 'UI 2 (Light)',
+    },
+    'ui_algo2': {
+        'label': 'User Interface Evaluation based on Algo 2',
+        'option_a_key': 'ui1',
+        'option_a_label': 'UI 1 (Dark)',
+        'option_b_key': 'ui2',
+        'option_b_label': 'UI 2 (Light)',
+    },
+}
+
+
 # ==================== GENRES ====================
 @api_bp.route('/genres', methods=['GET'])
 def get_genres():
@@ -147,6 +179,56 @@ def clear_all_ratings():
     return jsonify({'success': True})
 
 
+@api_bp.route('/home/sections', methods=['POST'])
+def refresh_home_sections():
+    """Recompute homepage movie sections from current rating/genre state."""
+    data = request.json or {}
+    user_rates = data.get('user_rates', [])
+    user_genres = data.get('user_genres', [])
+    selected_algorithm = str(data.get('selected_algorithm') or request.cookies.get('user_algorithm', '1'))
+
+    if not isinstance(user_rates, list):
+        user_rates = []
+    if not isinstance(user_genres, list):
+        user_genres = []
+    if selected_algorithm not in {'1', '2'}:
+        selected_algorithm = '1'
+
+    from .main import (
+        movies,
+        getMoviesByGenres,
+        getRecommendationBy,
+        getLikedSimilarBy,
+        getUserLikesBy,
+        get_liked_movie_ids,
+        enrich_movies_with_user_feedback,
+    )
+
+    liked_movie_ids = get_liked_movie_ids(user_rates, selected_algorithm)
+
+    default_genres_movies = getMoviesByGenres(user_genres, selected_algorithm)[:12]
+    if len(default_genres_movies) == 0:
+        default_genres_movies = movies.head(12).to_dict('records')
+
+    recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm)
+    likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)
+    likes_movies = getUserLikesBy([str(movie_id) for movie_id in liked_movie_ids])
+
+    default_genres_movies = enrich_movies_with_user_feedback(default_genres_movies, user_rates)
+    recommendations_movies = enrich_movies_with_user_feedback(recommendations_movies, user_rates)
+    likes_similar_movies = enrich_movies_with_user_feedback(likes_similar_movies, user_rates)
+    likes_movies = enrich_movies_with_user_feedback(likes_movies, user_rates)
+
+    return jsonify({
+        'default_genres_movies': default_genres_movies,
+        'recommendations': recommendations_movies,
+        'recommendations_message': recommendations_message,
+        'likes_similars': likes_similar_movies,
+        'likes_similar_message': likes_similar_message,
+        'likes': likes_movies,
+    })
+
+
 # ==================== PROFILE ====================
 @api_bp.route('/profile', methods=['GET'])
 def get_profile():
@@ -242,110 +324,135 @@ def update_genre_preference():
 @api_bp.route('/feedback', methods=['GET'])
 def get_feedback():
     """Get user's feedback submissions"""
-    if not g.user:
-        return jsonify({'feedback': []}), 200
+    try:
+        if not g.user:
+            return jsonify({'feedback': []}), 200
 
-    feedback_list = Feedback.query.filter_by(user_id=g.user.id).all()
-    return jsonify({
-        'feedback': [{
-            'id': f.id,
-            'feedback_type': f.feedback_type,
-            'vote_choice': f.vote_choice,
-            'voter_name': f.voter_name,
-            'voter_email': f.voter_email,
-            'feedback_text': f.feedback_text,
-            'consent_agreed': f.consent_agreed,
-            'created_at': f.created_at.isoformat(),
-        } for f in feedback_list]
-    })
+        feedback_list = Feedback.query.filter_by(user_id=g.user.id).all()
+        return jsonify({
+            'feedback': [{
+                'id': f.id,
+                'full_name': f.full_name,
+                'contact_email': f.contact_email,
+                'feedback_type': f.feedback_type,
+                'rating_option_a': f.rating_option_a,
+                'rating_option_b': f.rating_option_b,
+                'feedback_text': f.feedback_text,
+                'created_at': f.created_at.isoformat(),
+            } for f in feedback_list]
+        })
+    except Exception:
+        return jsonify({'feedback': []}), 200
 
 
 @api_bp.route('/feedback/prefill', methods=['GET'])
 def feedback_prefill():
     """Get default participant information and completed feedback types for logged users."""
-    if not g.user:
-        return jsonify({'logged_in': False, 'defaults': {}, 'submitted_types': []})
+    try:
+        if not g.user:
+            return jsonify({'logged_in': False, 'defaults': {}, 'submitted_types': []})
 
-    user_rows = Feedback.query.filter_by(user_id=g.user.id).all()
-    submitted_types = [row.feedback_type for row in user_rows]
-    latest_row = Feedback.query.filter_by(user_id=g.user.id).order_by(desc(Feedback.created_at)).first()
+        user_rows = Feedback.query.filter_by(user_id=g.user.id).all()
+        submitted_types = [row.feedback_type for row in user_rows]
+        latest_row = Feedback.query.filter_by(user_id=g.user.id).order_by(desc(Feedback.created_at)).first()
+        default_full_name = (latest_row.full_name if latest_row and latest_row.full_name else g.user.username) or ''
+        default_contact_email = (latest_row.contact_email if latest_row and latest_row.contact_email else g.user.email) or ''
 
-    return jsonify({
-        'logged_in': True,
-        'defaults': {
-            'voter_name': (latest_row.voter_name if latest_row and latest_row.voter_name else g.user.username),
-            'voter_email': (latest_row.voter_email if latest_row and latest_row.voter_email else g.user.email),
-        },
-        'submitted_types': submitted_types,
-    })
+        return jsonify({
+            'logged_in': True,
+            'defaults': {
+                'full_name': default_full_name,
+                'contact_email': default_contact_email,
+            },
+            'submitted_types': submitted_types,
+        })
+    except Exception:
+        return jsonify({'logged_in': bool(g.user), 'defaults': {}, 'submitted_types': []})
 
 
 @api_bp.route('/feedback', methods=['POST'])
 def submit_feedback():
     """Submit feedback"""
-    data = request.json
-    feedback_type = data.get('feedback_type')
-    vote_choice = data.get('vote_choice')
-    submission_type = data.get('submission_type')
-    valid_types = {'algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2'}
-    valid_votes = {'algo1', 'algo2', 'ui1', 'ui2'}
-    valid_submission_types = {'logged', 'anonymous'}
+    try:
+        data = request.json or {}
+        full_name = (data.get('full_name') or '').strip()
+        contact_email = (data.get('contact_email') or '').strip()
+        feedback_type = data.get('feedback_type')
+        rating_option_a = data.get('rating_option_a')
+        rating_option_b = data.get('rating_option_b')
+        submission_type = data.get('submission_type')
+        valid_types = set(FEEDBACK_TYPE_CONFIG.keys())
+        valid_submission_types = {'logged', 'anonymous'}
 
-    if not feedback_type or not vote_choice or not submission_type:
-        return jsonify({'error': 'Missing required fields'}), 400
+        if not feedback_type or rating_option_a is None or rating_option_b is None or not submission_type:
+            return jsonify({'error': 'Missing required fields'}), 400
 
-    if feedback_type not in valid_types:
-        return jsonify({'error': 'Invalid feedback type'}), 400
+        if feedback_type not in valid_types:
+            return jsonify({'error': 'Invalid feedback type'}), 400
 
-    if vote_choice not in valid_votes:
-        return jsonify({'error': 'Invalid vote choice'}), 400
+        try:
+            rating_option_a = int(rating_option_a)
+            rating_option_b = int(rating_option_b)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Ratings must be integers'}), 400
 
-    if submission_type not in valid_submission_types:
-        return jsonify({'error': 'Invalid submission type'}), 400
+        if not (1 <= rating_option_a <= 10) or not (1 <= rating_option_b <= 10):
+            return jsonify({'error': 'Ratings must be between 1 and 10'}), 400
 
-    if submission_type == 'logged' and not g.user:
-        return jsonify({'error': 'Login required for logged submission'}), 401
+        if submission_type not in valid_submission_types:
+            return jsonify({'error': 'Invalid submission type'}), 400
 
-    existing_for_type = None
+        if submission_type == 'logged' and not g.user:
+            return jsonify({'error': 'Login required for logged submission'}), 401
 
-    # For logged-in users, allow repeated submissions but keep a helpful message.
-    if g.user and submission_type == 'logged':
-        existing_for_type = Feedback.query.filter_by(
-            user_id=g.user.id,
-            feedback_type=feedback_type
-        ).order_by(desc(Feedback.created_at)).first()
+        if submission_type == 'logged':
+            if not full_name:
+                full_name = g.user.username if g.user else ''
+            if not contact_email:
+                contact_email = g.user.email if g.user else ''
+            if not full_name or not contact_email:
+                return jsonify({'error': 'Full name and contact email are required'}), 400
 
-        # Create new feedback for logged user
-        voter_name = data.get('voter_name', g.user.username)
-        voter_email = data.get('voter_email', g.user.email)
-        feedback = Feedback(
-            user_id=g.user.id,
-            submission_type=submission_type,
-            feedback_type=feedback_type,
-            vote_choice=vote_choice,
-            voter_name=voter_name,
-            voter_email=voter_email,
-            feedback_text=data.get('feedback_text'),
-            consent_agreed=data.get('consent_agreed', False)
-        )
-    else:
-        # Anonymous feedback
-        feedback = Feedback(
-            submission_type=submission_type,
-            feedback_type=feedback_type,
-            vote_choice=vote_choice,
-            voter_name=data.get('voter_name'),
-            voter_email=data.get('voter_email'),
-            feedback_text=data.get('feedback_text'),
-            consent_agreed=False
-        )
+        existing_for_type = None
 
-    db.session.add(feedback)
-    db.session.commit()
-    response = {'success': True, 'feedback_id': feedback.id}
-    if existing_for_type:
-        response['message'] = 'You have already submitted this type of evaluation before. You are welcome to submit it again.'
-    return jsonify(response)
+        # For logged-in users, allow repeated submissions but keep a helpful message.
+        if g.user and submission_type == 'logged':
+            existing_for_type = Feedback.query.filter_by(
+                user_id=g.user.id,
+                feedback_type=feedback_type
+            ).order_by(desc(Feedback.created_at)).first()
+
+            feedback = Feedback(
+                user_id=g.user.id,
+                full_name=full_name,
+                contact_email=contact_email,
+                submission_type=submission_type,
+                feedback_type=feedback_type,
+                rating_option_a=rating_option_a,
+                rating_option_b=rating_option_b,
+                feedback_text=data.get('feedback_text'),
+            )
+        else:
+            # Anonymous feedback
+            feedback = Feedback(
+                full_name=full_name or None,
+                contact_email=contact_email or None,
+                submission_type=submission_type,
+                feedback_type=feedback_type,
+                rating_option_a=rating_option_a,
+                rating_option_b=rating_option_b,
+                feedback_text=data.get('feedback_text'),
+            )
+
+        db.session.add(feedback)
+        db.session.commit()
+        response = {'success': True, 'feedback_id': feedback.id}
+        if existing_for_type:
+            response['message'] = 'You have already submitted this type of evaluation before. You are welcome to submit it again.'
+        return jsonify(response)
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to submit feedback'}), 500
 
 
 @api_bp.route('/feedback/progress', methods=['GET'])
@@ -354,7 +461,7 @@ def feedback_progress():
     if not g.user:
         return jsonify({'error': 'Not logged in'}), 401
 
-    all_types = ['algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2']
+    all_types = list(FEEDBACK_TYPE_CONFIG.keys())
     submitted = {row.feedback_type for row in Feedback.query.filter_by(user_id=g.user.id).all()}
     progress = [{
         'feedback_type': ft,
@@ -369,79 +476,95 @@ def feedback_progress():
 
 @api_bp.route('/evaluation/summary', methods=['GET'])
 def evaluation_summary():
-    """Return aggregated vote counts for evaluation charts."""
-    source_filter = request.args.get('source', 'all')
-    if source_filter not in {'all', 'logged', 'anonymous'}:
-        return jsonify({'error': 'Invalid source filter'}), 400
+    """Return aggregated rating stats for evaluation charts."""
+    try:
+        source_filter = request.args.get('source', 'all')
+        if source_filter not in {'all', 'logged', 'anonymous'}:
+            return jsonify({'error': 'Invalid source filter'}), 400
 
-    types = ['algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2']
+        types = list(FEEDBACK_TYPE_CONFIG.keys())
 
-    def apply_source_filter(query):
-        if source_filter == 'logged':
-            return query.filter(Feedback.submission_type == 'logged')
-        if source_filter == 'anonymous':
-            return query.filter(Feedback.submission_type == 'anonymous')
-        return query
+        def apply_source_filter(query):
+            if source_filter == 'logged':
+                return query.filter(Feedback.submission_type == 'logged')
+            if source_filter == 'anonymous':
+                return query.filter(Feedback.submission_type == 'anonymous')
+            return query
 
-    summary = {}
-    for feedback_type in types:
-        query = Feedback.query.filter_by(feedback_type=feedback_type)
-        query = apply_source_filter(query)
-        if feedback_type.startswith('algo_'):
-            option_a_values = ['algo1']
-            option_b_values = ['algo2']
-        else:
-            option_a_values = ['ui1']
-            option_b_values = ['ui2']
+        summary = {}
+        for feedback_type in types:
+            query = Feedback.query.filter_by(feedback_type=feedback_type)
+            query = apply_source_filter(query)
+            rows = query.all()
+            valid_rows = [row for row in rows if row.rating_option_a is not None and row.rating_option_b is not None]
+            total = len(valid_rows)
 
-        better_count = query.filter(Feedback.vote_choice.in_(option_a_values)).count()
-        worse_count = query.filter(Feedback.vote_choice.in_(option_b_values)).count()
-        total = better_count + worse_count
+            sum_a = sum(int(row.rating_option_a) for row in valid_rows)
+            sum_b = sum(int(row.rating_option_b) for row in valid_rows)
+            avg_a = round(sum_a / total, 2) if total else 0
+            avg_b = round(sum_b / total, 2) if total else 0
 
-        summary[feedback_type] = {
-            'better': better_count,
-            'worse': worse_count,
-            'total': total,
-            'has_data': total > 0,
-            'better_pct': round((better_count / total) * 100, 1) if total else 0,
-            'worse_pct': round((worse_count / total) * 100, 1) if total else 0,
-        }
+            prefer_a = sum(1 for row in valid_rows if int(row.rating_option_a) > int(row.rating_option_b))
+            prefer_b = sum(1 for row in valid_rows if int(row.rating_option_b) > int(row.rating_option_a))
+            ties = sum(1 for row in valid_rows if int(row.rating_option_a) == int(row.rating_option_b))
 
-    return jsonify({'summary': summary, 'source': source_filter})
+            cfg = FEEDBACK_TYPE_CONFIG[feedback_type]
+
+            summary[feedback_type] = {
+                'option_a_label': cfg['option_a_label'],
+                'option_b_label': cfg['option_b_label'],
+                'total': total,
+                'avg_a': avg_a,
+                'avg_b': avg_b,
+                'delta': round(avg_a - avg_b, 2) if total else 0,
+                'has_data': total > 0,
+                'prefer_a_count': prefer_a,
+                'prefer_b_count': prefer_b,
+                'tie_count': ties,
+            }
+
+        return jsonify({'summary': summary, 'source': source_filter})
+    except Exception:
+        return jsonify({'summary': {}, 'source': request.args.get('source', 'all')}), 200
 
 
 @api_bp.route('/evaluation/votes', methods=['GET'])
 def evaluation_votes():
-    """Return vote records for admin table only."""
-    if not g.user or not getattr(g.user, 'admin', False):
-        return jsonify({'error': 'Admin access required'}), 403
+    """Return rating records for admin table only."""
+    try:
+        if not g.user or not getattr(g.user, 'admin', False):
+            return jsonify({'error': 'Admin access required'}), 403
 
-    source_filter = request.args.get('source', 'all')
-    type_filter = request.args.get('feedback_type', 'all')
+        source_filter = request.args.get('source', 'all')
+        type_filter = request.args.get('feedback_type', 'all')
 
-    query = Feedback.query
+        query = Feedback.query
 
-    if source_filter in {'logged', 'anonymous'}:
-        query = query.filter(Feedback.submission_type == source_filter)
+        if source_filter in {'logged', 'anonymous'}:
+            query = query.filter(Feedback.submission_type == source_filter)
 
-    if type_filter in {'algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2'}:
-        query = query.filter(Feedback.feedback_type == type_filter)
+        if type_filter in FEEDBACK_TYPE_CONFIG:
+            query = query.filter(Feedback.feedback_type == type_filter)
 
-    rows = query.order_by(desc(Feedback.created_at)).all()
-    return jsonify({
-        'votes': [{
-            'id': row.id,
-            'user_id': row.user_id,
-            'submission_type': row.submission_type,
-            'feedback_type': row.feedback_type,
-            'vote_choice': row.vote_choice,
-            'voter_name': row.voter_name,
-            'voter_email': row.voter_email,
-            'feedback_text': row.feedback_text,
-            'consent_agreed': row.consent_agreed,
-            'created_at': row.created_at.isoformat() if row.created_at else None,
-        } for row in rows]
-    })
+        rows = query.order_by(desc(Feedback.created_at)).all()
+        return jsonify({
+            'votes': [{
+                'id': row.id,
+                'user_id': row.user_id,
+                'full_name': row.full_name,
+                'contact_email': row.contact_email,
+                'submission_type': row.submission_type,
+                'feedback_type': row.feedback_type,
+                'option_a_label': FEEDBACK_TYPE_CONFIG.get(row.feedback_type, {}).get('option_a_label', 'Option A'),
+                'option_b_label': FEEDBACK_TYPE_CONFIG.get(row.feedback_type, {}).get('option_b_label', 'Option B'),
+                'rating_option_a': row.rating_option_a,
+                'rating_option_b': row.rating_option_b,
+                'feedback_text': row.feedback_text,
+                'created_at': row.created_at.isoformat() if row.created_at else None,
+            } for row in rows]
+        })
+    except Exception:
+        return jsonify({'votes': []}), 200
 
 
 @api_bp.route('/feedback/<int:feedback_id>', methods=['PUT'])

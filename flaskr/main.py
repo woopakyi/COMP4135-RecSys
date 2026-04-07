@@ -15,66 +15,82 @@ bp = Blueprint('main', __name__, url_prefix='/')
 movies, genres, rates = loadData()
 
 # set the boolean from False to True if you have finished developing the corresponding algorithm.
-algo1 = False #FM
-algo2 = False #SASRec
+algo1_is_done = False #FM
+algo2_is_done = False #SASRec
 
 
 @bp.route('/', methods=('GET', 'POST'))
 def index():
     default_genres = genres.to_dict('records')
-    if g.user:
-        selected_algorithm = '1' if g.user.algorithm_preference == 'algo1' else '2'
-        selected_ui = g.user.ui_preference or '1'
-        setup_started = request.cookies.get('user_started', '') == '1'
-        setup_complete = bool(setup_started)
+    try:
+        if g.user:
+            selected_algorithm = '1' if g.user.algorithm_preference == 'algo1' else '2'
+            selected_ui = g.user.ui_preference or '1'
+            setup_started = request.cookies.get('user_started', '') == '1'
+            setup_complete = bool(setup_started)
 
-        raw_scores = g.user.get_genre_preferences()
-        user_genre_scores = {}
-        for key, value in raw_scores.items():
-            try:
-                user_genre_scores[int(key)] = int(float(value))
-            except (TypeError, ValueError):
-                continue
-        user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
+            raw_scores = g.user.get_genre_preferences()
+            user_genre_scores = {}
+            for key, value in raw_scores.items():
+                try:
+                    user_genre_scores[int(key)] = int(float(value))
+                except (TypeError, ValueError):
+                    continue
+            user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
 
-        from .models import Rating
-        db_ratings = Rating.query.filter_by(user_id=g.user.id).all()
-        user_rates = []
-        for row in db_ratings:
-            ts = int(row.timestamp.timestamp()) if row.timestamp else int(datetime.now(timezone.utc).timestamp())
-            user_rates.append(f'611|{row.movie_id}|{int(round(row.rating))}|{ts}')
-    else:
+            from .models import Rating
+            db_ratings = Rating.query.filter_by(user_id=g.user.id).all()
+            user_rates = []
+            for row in db_ratings:
+                ts = int(row.timestamp.timestamp()) if row.timestamp else int(datetime.now(timezone.utc).timestamp())
+                user_rates.append(f'611|{row.movie_id}|{int(round(row.rating))}|{ts}')
+        else:
+            selected_algorithm = request.cookies.get('user_algorithm', '')
+            selected_ui = request.cookies.get('user_ui', '')
+            setup_started = request.cookies.get('user_started', '') == '1'
+            setup_complete = bool(selected_algorithm and selected_ui and setup_started)
+
+            user_genre_scores = parse_genre_scores(request.cookies.get('user_genre_scores', ''))
+            user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
+
+            user_rates = parse_cookie_list(request.cookies.get('user_rates'))
+        liked_movie_ids = get_liked_movie_ids(user_rates, selected_algorithm)
+
+        default_genres_movies = []
+        recommendations_movies = []
+        recommendations_message = 'Choose an algorithm and UI, then save to begin.'
+        likes_similar_movies = []
+        likes_similar_message = 'Choose an algorithm and UI, then save to begin.'
+        likes_movies = []
+
+        if setup_complete:
+            default_genres_movies = getMoviesByGenres(user_genres, selected_algorithm)[:12]
+            if len(default_genres_movies) == 0:
+                default_genres_movies = movies.head(12).to_dict('records')
+
+            recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm)
+            likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)
+            likes_movies = getUserLikesBy([str(movie_id) for movie_id in liked_movie_ids])
+
+            default_genres_movies = enrich_movies_with_user_feedback(default_genres_movies, user_rates)
+            recommendations_movies = enrich_movies_with_user_feedback(recommendations_movies, user_rates)
+            likes_similar_movies = enrich_movies_with_user_feedback(likes_similar_movies, user_rates)
+            likes_movies = enrich_movies_with_user_feedback(likes_movies, user_rates)
+    except Exception:
         selected_algorithm = request.cookies.get('user_algorithm', '')
         selected_ui = request.cookies.get('user_ui', '')
         setup_started = request.cookies.get('user_started', '') == '1'
         setup_complete = bool(selected_algorithm and selected_ui and setup_started)
-
         user_genre_scores = parse_genre_scores(request.cookies.get('user_genre_scores', ''))
         user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
-
         user_rates = parse_cookie_list(request.cookies.get('user_rates'))
-    liked_movie_ids = get_liked_movie_ids(user_rates)
-
-    default_genres_movies = []
-    recommendations_movies = []
-    recommendations_message = 'Choose an algorithm and UI, then save to begin.'
-    likes_similar_movies = []
-    likes_similar_message = 'Choose an algorithm and UI, then save to begin.'
-    likes_movies = []
-
-    if setup_complete:
-        default_genres_movies = getMoviesByGenres(user_genres)[:12]
-        if len(default_genres_movies) == 0:
-            default_genres_movies = movies.head(12).to_dict('records')
-
-        recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm)
-        likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)
-        likes_movies = getUserLikesBy([str(movie_id) for movie_id in liked_movie_ids])
-
-        default_genres_movies = enrich_movies_with_user_feedback(default_genres_movies, user_rates)
-        recommendations_movies = enrich_movies_with_user_feedback(recommendations_movies, user_rates)
-        likes_similar_movies = enrich_movies_with_user_feedback(likes_similar_movies, user_rates)
-        likes_movies = enrich_movies_with_user_feedback(likes_movies, user_rates)
+        liked_movie_ids = get_liked_movie_ids(user_rates, selected_algorithm)
+        default_genres_movies = []
+        recommendations_movies = []
+        recommendations_message = 'Choose an algorithm and UI, then save to begin.'
+        likes_similar_movies = []
+        likes_similar_message = 'Choose an algorithm and UI, then save to begin.'
+        likes_movies = []
 
     return render_template('index.html',
                            genres=default_genres,
@@ -258,7 +274,17 @@ def normalize_rating_to_legacy_scale(raw_rating):
     return round(clamped / 2, 1)
 
 
-def get_liked_movie_ids(user_rates):
+def get_liked_movie_ids(user_rates, selected_algorithm='1'):
+    if selected_algorithm == '1' and algo1_is_done:
+        from . import algo1 as algo1_module
+        return algo1_module.get_liked_movie_ids(user_rates)
+    if selected_algorithm == '2' and algo2_is_done:
+        from . import algo2 as algo2_module
+        return algo2_module.get_liked_movie_ids(user_rates)
+    return get_liked_movie_ids_default(user_rates)
+
+
+def get_liked_movie_ids_default(user_rates):
     liked_ids = []
     for rate in user_rates:
         parts = rate.split('|')
@@ -273,7 +299,17 @@ def get_liked_movie_ids(user_rates):
 def is_genre_match(movie_genres, interested_genres):
     return bool(set(movie_genres).intersection(set(interested_genres)))
 
-def getMoviesByGenres(user_genres):
+def getMoviesByGenres(user_genres, selected_algorithm='1'):
+    if selected_algorithm == '1' and algo1_is_done:
+        from . import algo1 as algo1_module
+        return algo1_module.getMoviesByGenres(user_genres, movies, genres)
+    if selected_algorithm == '2' and algo2_is_done:
+        from . import algo2 as algo2_module
+        return algo2_module.getMoviesByGenres(user_genres, movies, genres)
+    return getMoviesByGenresDefault(user_genres)
+
+
+def getMoviesByGenresDefault(user_genres):
     results = []
     if len(user_genres) > 0:
         genres_mask = genres['id'].isin([int(id) for id in user_genres])
@@ -289,13 +325,12 @@ def getMoviesByGenres(user_genres):
 
 # Modify this function
 def getRecommendationBy(user_rates, selected_algorithm='1'):
-    if selected_algorithm == '1' and algo1:
+    if selected_algorithm == '1' and algo1_is_done:
         from . import algo1 as algo1_module
         return algo1_module.getRecommendationBy(user_rates, movies, rates)
-    if selected_algorithm == '2' and algo2:
+    if selected_algorithm == '2' and algo2_is_done:
         from . import algo2 as algo2_module
         return algo2_module.getRecommendationBy(user_rates, movies, rates)
-
     return getRecommendationByDefault(user_rates)
 
 
@@ -339,13 +374,12 @@ def getRecommendationByDefault(user_rates):
 
 # Modify this function
 def getLikedSimilarBy(user_likes, selected_algorithm='1'):
-    if selected_algorithm == '1' and algo1:
+    if selected_algorithm == '1' and algo1_is_done:
         from . import algo1 as algo1_module
         return algo1_module.getLikedSimilarBy(user_likes, movies)
-    if selected_algorithm == '2' and algo2:
+    if selected_algorithm == '2' and algo2_is_done:
         from . import algo2 as algo2_module
         return algo2_module.getLikedSimilarBy(user_likes, movies)
-
     return getLikedSimilarByDefault(user_likes)
 
 

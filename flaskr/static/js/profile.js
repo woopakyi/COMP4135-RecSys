@@ -446,7 +446,9 @@ const app = createApp({
                 'algo_ui1': 'Algorithm (UI 1)',
                 'algo_ui2': 'Algorithm (UI 2)',
                 'ui_algo1': 'UI (Algo 1)',
-                'ui_algo2': 'UI (Algo 2)'
+                'ui_algo2': 'UI (Algo 2)',
+                'algorithm_eval': 'Algorithm Evaluation',
+                'ui_eval': 'User Interface Evaluation'
             };
             return types[type] || type;
         },

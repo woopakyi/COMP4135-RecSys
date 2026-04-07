@@ -62,7 +62,7 @@
 
       <div class="field mt-3">
         <div class="control">
-          <a class="button is-link is-light is-fullwidth" href="{{ url_for('auth.google_login') }}">
+          <a class="button is-link is-light is-fullwidth google-continue-btn" href="{{ url_for('auth.google_login') }}">
             <span class="icon"><i class="fa fa-google"></i></span>
             <span>Continue with Google</span>
           </a>
@@ -77,4 +77,14 @@
 </div>
 
 <script type="module" src="{{ url_for('static', filename='js/auth-login.js') }}"></script>
+<style>
+  .app-body.ui-light .google-continue-btn,
+  .app-body.ui-light .google-continue-btn .icon,
+  .app-body.ui-light .google-continue-btn span,
+  .app-body.ui-dark .google-continue-btn,
+  .app-body.ui-dark .google-continue-btn .icon,
+  .app-body.ui-dark .google-continue-btn span {
+    color: #485fc7;
+  }
+</style>
 {% endblock %}
