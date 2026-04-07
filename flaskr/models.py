@@ -24,7 +24,6 @@ class User(db.Model):
     # Relationships
     ratings = db.relationship('Rating', backref='user', lazy=True, cascade='all, delete-orphan')
     feedback = db.relationship('Feedback', backref='user', lazy=True, cascade='all, delete-orphan')
-    genre_scores = db.relationship('GenreScore', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         """Hash and set user password"""
@@ -72,18 +71,6 @@ class Rating(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'movie_id', name='unique_user_movie_rating'),)
 
 
-class GenreScore(db.Model):
-    __tablename__ = 'genre_scores'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    genre_id = db.Column(db.Integer, nullable=False)
-    score = db.Column(db.Float, nullable=False)  # 0-10 scale
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    __table_args__ = (db.UniqueConstraint('user_id', 'genre_id', name='unique_user_genre_score'),)
-
-
 class Feedback(db.Model):
     __tablename__ = 'feedback'
     
@@ -105,22 +92,7 @@ class Feedback(db.Model):
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Constraint: logged-in users can only submit each feedback type once
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'feedback_type', name='unique_user_feedback_type'),
         db.Index('idx_feedback_type_submission', 'feedback_type', 'submission_type'),
-        db.Index('idx_feedback_updated_at', 'updated_at'),
     )
-
-
-class Vote(db.Model):
-    __tablename__ = 'votes'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    algorithm = db.Column(db.String(20), nullable=False)  # algo1 or algo2
-    ui_variant = db.Column(db.String(20), nullable=False)
-    vote = db.Column(db.String(20), nullable=False)  # 'better', 'worse', 'same'
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)

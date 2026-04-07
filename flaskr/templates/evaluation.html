@@ -19,8 +19,8 @@
             </div>
         </div>
 
-        <div class="columns is-multiline is-variable is-4">
-            <div class="column is-12-mobile is-6-desktop" v-for="card in cards" :key="card.key">
+        <div class="chart-grid">
+            <div class="chart-grid-item" v-for="card in cards" :key="card.key">
                 <div class="chart-card">
                     <div class="chart-header">
                         <h2 class="title is-5 mb-1">[[ card.title ]]</h2>
@@ -85,9 +85,7 @@
                             <th>Voter Name</th>
                             <th>Voter Email</th>
                             <th>Feedback Text</th>
-                            <th>Consent</th>
                             <th>Created</th>
-                            <th>Time</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -100,12 +98,10 @@
                             <td>[[ row.voter_name || 'NULL' ]]</td>
                             <td>[[ row.voter_email || 'NULL' ]]</td>
                             <td>[[ row.feedback_text || 'NULL' ]]</td>
-                            <td>[[ row.consent_agreed ? 'true' : 'false' ]]</td>
                             <td>[[ formatTime(row.created_at) ]]</td>
-                            <td>[[ formatTime(row.updated_at || row.created_at) ]]</td>
                         </tr>
                         <tr v-if="votes.length === 0">
-                            <td colspan="11" class="has-text-centered has-text-grey py-6">No feedback records found for the current filter.</td>
+                            <td colspan="9" class="has-text-centered has-text-grey py-6">No feedback records found for the current filter.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -179,6 +175,16 @@
         border-color: var(--chip-active-bg);
     }
 
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.9rem;
+    }
+
+    .chart-grid-item {
+        min-width: 0;
+    }
+
     .chart-card {
         border-radius: 18px;
         border: 1px solid var(--card-border);
@@ -186,7 +192,7 @@
         box-shadow: var(--card-shadow);
         padding: 1.1rem;
         height: 100%;
-        max-width: 460px;
+        max-width: none;
         margin-left: auto;
         margin-right: auto;
     }
@@ -327,6 +333,47 @@
         border-bottom: 1px solid var(--border-soft);
         color: var(--text-primary);
         background: transparent;
+        padding: 0.75rem;
+        word-break: break-word;
+        white-space: normal;
+    }
+
+    .eval-table th:nth-child(3),
+    .eval-table td:nth-child(3) {
+        min-width: 190px;
+    }
+
+    .eval-table th:nth-child(4),
+    .eval-table td:nth-child(4) {
+        min-width: 120px;
+    }
+
+    .eval-table th:nth-child(5),
+    .eval-table td:nth-child(5) {
+        min-width: 120px;
+    }
+
+    .eval-table th:nth-child(6),
+    .eval-table td:nth-child(6) {
+        min-width: 160px;
+    }
+
+    .eval-table th:nth-child(7),
+    .eval-table td:nth-child(7) {
+        min-width: 180px;
+    }
+
+    .eval-table th:nth-child(8),
+    .eval-table td:nth-child(8) {
+        min-width: 560px;
+        max-width: 600px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .eval-table th:nth-child(9),
+    .eval-table td:nth-child(9) {
+        min-width: 160px;
     }
 
     .eval-table tr:last-child td {
@@ -334,15 +381,28 @@
     }
 
     @media (max-width: 768px) {
-        .chart-wrap {
-            width: 170px;
-            height: 170px;
+        .eval-table th:nth-child(3),
+        .eval-table td:nth-child(3),
+        .eval-table th:nth-child(4),
+        .eval-table td:nth-child(4),
+        .eval-table th:nth-child(5),
+        .eval-table td:nth-child(5),
+        .eval-table th:nth-child(6),
+        .eval-table td:nth-child(6),
+        .eval-table th:nth-child(7),
+        .eval-table td:nth-child(7),
+        .eval-table th:nth-child(9),
+        .eval-table td:nth-child(9) {
+            min-width: 140px;
         }
 
-        .chart-center {
-            width: 72px;
-            height: 72px;
-            font-size: 1.25rem;
+        .eval-table th:nth-child(8),
+        .eval-table td:nth-child(8) {
+            min-width: 420px;
+        }
+
+        .chart-grid {
+            grid-template-columns: 1fr;
         }
 
         .filter-row {
@@ -373,28 +433,28 @@ const evalApp = createApp({
                 {
                     key: 'algo_ui1',
                     title: 'Algorithm Evaluation based on UI 1',
-                    description: 'Logged user and anonymous votes',
-                    leftLabel: 'Factorization Machine',
-                    rightLabel: 'Self-Attentive Sequential Recommendation'
+                    description: this.getChartDescription(),
+                    leftLabel: 'Algo 1 (FM)',
+                    rightLabel: 'Algo 2 (SASRec)'
                 },
                 {
                     key: 'algo_ui2',
                     title: 'Algorithm Evaluation based on UI 2',
-                    description: 'Logged user and anonymous votes',
-                    leftLabel: 'Factorization Machine',
-                    rightLabel: 'Self-Attentive Sequential Recommendation'
+                    description: this.getChartDescription(),
+                    leftLabel: 'Algo 1 (FM)',
+                    rightLabel: 'Algo 2 (SASRec)'
                 },
                 {
                     key: 'ui_algo1',
                     title: 'UI Evaluation based on Algorithm 1',
-                    description: 'Logged user and anonymous votes',
+                    description: this.getChartDescription(),
                     leftLabel: 'UI 1',
                     rightLabel: 'UI 2'
                 },
                 {
                     key: 'ui_algo2',
                     title: 'UI Evaluation based on Algorithm 2',
-                    description: 'Logged user and anonymous votes',
+                    description: this.getChartDescription(),
                     leftLabel: 'UI 1',
                     rightLabel: 'UI 2'
                 }
@@ -421,6 +481,11 @@ const evalApp = createApp({
         }
     },
     methods: {
+        getChartDescription() {
+            if (this.sourceFilter === 'logged') return 'Logged user votes only';
+            if (this.sourceFilter === 'anonymous') return 'Anonymous votes only';
+            return 'Logged user and anonymous votes';
+        },
         async loadSummary() {
             const res = await fetch(`/api/evaluation/summary?source=${encodeURIComponent(this.sourceFilter)}`);
             if (!res.ok) {
@@ -464,8 +529,8 @@ const evalApp = createApp({
         },
         renderVoteChoice(voteChoice) {
             const names = {
-                algo1: 'Factorization Machine',
-                algo2: 'Self-Attentive Sequential Recommendation',
+                algo1: 'Algo 1 (FM)',
+                algo2: 'Algo 2 (SASRec)',
                 ui1: 'UI 1 (Dark)',
                 ui2: 'UI 2 (Light)'
             };

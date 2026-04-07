@@ -43,24 +43,10 @@ def _merge_user_accounts(primary_user, secondary_user):
                 existing.timestamp = rating.timestamp
             db.session.delete(rating)
 
-    # Merge feedback: keep only latest submission per feedback type.
-    merged_by_type = {}
-    all_feedback = Feedback.query.filter(Feedback.user_id.in_([primary_user.id, secondary_user.id])).all()
-    for row in all_feedback:
-        current = merged_by_type.get(row.feedback_type)
-        row_time = row.updated_at or row.created_at
-        current_time = (current.updated_at or current.created_at) if current else None
-        if not current or (row_time and current_time and row_time > current_time) or (row_time and not current_time):
-            merged_by_type[row.feedback_type] = row
-
-    for row in all_feedback:
-        winner = merged_by_type.get(row.feedback_type)
-        if not winner:
-            continue
-        if row.id == winner.id:
-            row.user_id = primary_user.id
-        else:
-            db.session.delete(row)
+    # Merge feedback: preserve all submissions by reassigning ownership.
+    secondary_feedback = Feedback.query.filter_by(user_id=secondary_user.id).all()
+    for row in secondary_feedback:
+        row.user_id = primary_user.id
 
     # Merge preference fields.
     if primary_user.algorithm_preference in (None, '') and secondary_user.algorithm_preference:
@@ -152,7 +138,7 @@ def login():
         
         # Find user
         user = User.query.filter_by(email=email).first()
-        
+
         if user and user.check_password(password):
             # Set session
             session.clear()
@@ -160,8 +146,8 @@ def login():
             session['username'] = user.username
             session['algorithm'] = user.algorithm_preference
             session['ui_variant'] = user.ui_preference
-            
-            flash(f'Welcome back, {user.username}!', 'success')
+
+            flash('Signed in successfully.', 'success')
             return redirect(url_for('main.index'))
         else:
             flash('Invalid email or password', 'error')
@@ -279,6 +265,10 @@ def google_callback():
                 flash('Account link target not found. Please sign in and try again.', 'error')
                 return redirect(url_for('auth.login'))
 
+            if primary_user.google_sub and google_sub and primary_user.google_sub == google_sub:
+                flash('This account is already linked with Google.', 'success')
+                return redirect(url_for('main.profile'))
+
             secondary_user = None
             if google_sub:
                 secondary_user = User.query.filter_by(google_sub=google_sub).first()
@@ -286,10 +276,19 @@ def google_callback():
                 secondary_user = User.query.filter_by(email=email).first()
 
             if secondary_user and secondary_user.id != primary_user.id:
-                _merge_user_accounts(primary_user, secondary_user)
+                flash('This Google account is already linked with another user. Please use a different Google account or sign in with your current email.', 'error')
+                return redirect(url_for('main.profile'))
 
             primary_user.google_sub = google_sub or primary_user.google_sub
-            db.session.commit()
+            # Replace email and disable password login by randomizing password hash.
+            primary_user.email = email
+            primary_user.set_password(secrets.token_urlsafe(32))
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash('Switch failed due to account conflict. Please use another Google account.', 'error')
+                return redirect(url_for('main.profile'))
 
             session.clear()
             session['user_id'] = primary_user.id
@@ -297,7 +296,7 @@ def google_callback():
             session['algorithm'] = primary_user.algorithm_preference
             session['ui_variant'] = primary_user.ui_preference
 
-            flash('Google account linked successfully.', 'success')
+            flash('Account switched to Google Sign-in successfully.', 'success')
             return redirect(url_for('main.profile'))
 
         user = None
@@ -323,7 +322,12 @@ def google_callback():
             db.session.commit()
         else:
             user.google_sub = google_sub or user.google_sub
-            db.session.commit()
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash('Google account link conflict detected. Please sign in with Google and retry linking.', 'error')
+                return redirect(url_for('auth.login'))
 
         session.clear()
         session['user_id'] = user.id
@@ -331,7 +335,7 @@ def google_callback():
         session['algorithm'] = user.algorithm_preference
         session['ui_variant'] = user.ui_preference
 
-        flash(f'Welcome, {user.username}!', 'success')
+        flash('Signed in successfully.', 'success')
         return redirect(url_for('main.index'))
     except Exception:
         db.session.rollback()

@@ -51,9 +51,14 @@ def create_app(test_config=None):
             if (app.config.get('SQLALCHEMY_DATABASE_URI') or '').startswith('postgresql://'):
                 db.session.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS full_name"))
                 db.session.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS contact_email"))
+                db.session.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS google_login_only"))
+                db.session.execute(text("ALTER TABLE feedback DROP CONSTRAINT IF EXISTS unique_user_feedback_type"))
+                db.session.execute(text("ALTER TABLE feedback DROP COLUMN IF EXISTS updated_at"))
+                db.session.execute(text("DROP INDEX IF EXISTS idx_feedback_updated_at"))
+                db.session.execute(text("DROP TABLE IF EXISTS genre_scores"))
+                db.session.execute(text("DROP TABLE IF EXISTS votes"))
             db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)"))
             db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_feedback_type_submission ON feedback(feedback_type, submission_type)"))
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_feedback_updated_at ON feedback(updated_at)"))
             db.session.commit()
         except Exception:
             db.session.rollback()

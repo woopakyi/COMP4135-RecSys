@@ -68,7 +68,7 @@ def index():
             default_genres_movies = movies.head(12).to_dict('records')
 
         recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm)
-        likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids)
+        likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)
         likes_movies = getUserLikesBy([str(movie_id) for movie_id in liked_movie_ids])
 
         default_genres_movies = enrich_movies_with_user_feedback(default_genres_movies, user_rates)
@@ -111,7 +111,7 @@ def evaluation():
 
 @bp.route('/debug/db', methods=('GET',))
 def debug_database():
-    from .models import db, User, Movie, Rating, GenreScore, Feedback, Vote
+    from .models import db, User, Movie, Rating, Feedback
 
     def safe_count(model):
         try:
@@ -129,9 +129,7 @@ def debug_database():
             'users': safe_count(User),
             'movies': safe_count(Movie),
             'ratings': safe_count(Rating),
-            'genre_scores': safe_count(GenreScore),
             'feedback': safe_count(Feedback),
-            'votes': safe_count(Vote),
         }
     })
     
@@ -340,7 +338,18 @@ def getRecommendationByDefault(user_rates):
 
 
 # Modify this function
-def getLikedSimilarBy(user_likes):
+def getLikedSimilarBy(user_likes, selected_algorithm='1'):
+    if selected_algorithm == '1' and algo1:
+        from . import algo1 as algo1_module
+        return algo1_module.getLikedSimilarBy(user_likes, movies)
+    if selected_algorithm == '2' and algo2:
+        from . import algo2 as algo2_module
+        return algo2_module.getLikedSimilarBy(user_likes, movies)
+
+    return getLikedSimilarByDefault(user_likes)
+
+
+def getLikedSimilarByDefault(user_likes):
     results = []
     if len(user_likes) > 0:
         # Step 1: Representing items with multi-hot vectors
@@ -380,11 +389,12 @@ def build_user_profile(movieIds, item_rep_vector, feature_list, weighted=True, n
         user_profile = user_profile / sum(user_profile.values)
         
     return user_profile
+
 # Step 3: Predicting user preference for items
-def generate_recommendation_results(user_profile,item_rep_matrix, movies_data, k=12):
+def generate_recommendation_results(user_profile, item_rep_matrix, movies_data, k=12):
     u_v = user_profile.values
-    u_v_matrix =  [u_v]
-    recommendation_table =  cosine_similarity(u_v_matrix,item_rep_matrix)
+    u_v_matrix = [u_v]
+    recommendation_table = cosine_similarity(u_v_matrix, item_rep_matrix)
     recommendation_table_df = movies_data.copy(deep=True)
     recommendation_table_df['similarity'] = recommendation_table[0]
     rec_result = recommendation_table_df.sort_values(by=['similarity'], ascending=False)[:k]

@@ -4,8 +4,7 @@ Handles ratings, profile, feedback, and data migration
 """
 
 from flask import Blueprint, jsonify, request, g
-from .models import db, User, Movie, Rating, GenreScore, Feedback
-from werkzeug.security import generate_password_hash
+from .models import db, User, Movie, Rating, Feedback
 from sqlalchemy import desc
 import json
 
@@ -257,7 +256,6 @@ def get_feedback():
             'feedback_text': f.feedback_text,
             'consent_agreed': f.consent_agreed,
             'created_at': f.created_at.isoformat(),
-            'updated_at': f.updated_at.isoformat()
         } for f in feedback_list]
     })
 
@@ -270,7 +268,7 @@ def feedback_prefill():
 
     user_rows = Feedback.query.filter_by(user_id=g.user.id).all()
     submitted_types = [row.feedback_type for row in user_rows]
-    latest_row = Feedback.query.filter_by(user_id=g.user.id).order_by(desc(Feedback.updated_at), desc(Feedback.created_at)).first()
+    latest_row = Feedback.query.filter_by(user_id=g.user.id).order_by(desc(Feedback.created_at)).first()
 
     return jsonify({
         'logged_in': True,
@@ -308,27 +306,14 @@ def submit_feedback():
     if submission_type == 'logged' and not g.user:
         return jsonify({'error': 'Login required for logged submission'}), 401
 
-    # For logged-in users, check if they already submitted this type
+    existing_for_type = None
+
+    # For logged-in users, allow repeated submissions but keep a helpful message.
     if g.user and submission_type == 'logged':
-        existing = Feedback.query.filter_by(
+        existing_for_type = Feedback.query.filter_by(
             user_id=g.user.id,
             feedback_type=feedback_type
-        ).first()
-
-        if existing:
-            # Update existing feedback
-            existing.vote_choice = vote_choice
-            existing.voter_name = data.get('voter_name', g.user.username)
-            existing.voter_email = data.get('voter_email', g.user.email)
-            existing.feedback_text = data.get('feedback_text')
-            existing.consent_agreed = data.get('consent_agreed', False)
-            db.session.commit()
-            return jsonify({
-                'success': True,
-                'feedback_id': existing.id,
-                'updated_existing': True,
-                'message': 'You have already submitted this evaluation type before. Your previous submission has been updated.'
-            })
+        ).order_by(desc(Feedback.created_at)).first()
 
         # Create new feedback for logged user
         voter_name = data.get('voter_name', g.user.username)
@@ -357,7 +342,10 @@ def submit_feedback():
 
     db.session.add(feedback)
     db.session.commit()
-    return jsonify({'success': True, 'feedback_id': feedback.id})
+    response = {'success': True, 'feedback_id': feedback.id}
+    if existing_for_type:
+        response['message'] = 'You have already submitted this type of evaluation before. You are welcome to submit it again.'
+    return jsonify(response)
 
 
 @api_bp.route('/feedback/progress', methods=['GET'])
@@ -439,7 +427,7 @@ def evaluation_votes():
     if type_filter in {'algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2'}:
         query = query.filter(Feedback.feedback_type == type_filter)
 
-    rows = query.order_by(desc(Feedback.updated_at), desc(Feedback.created_at)).all()
+    rows = query.order_by(desc(Feedback.created_at)).all()
     return jsonify({
         'votes': [{
             'id': row.id,
@@ -451,7 +439,6 @@ def evaluation_votes():
             'voter_email': row.voter_email,
             'feedback_text': row.feedback_text,
             'consent_agreed': row.consent_agreed,
-            'updated_at': row.updated_at.isoformat() if row.updated_at else None,
             'created_at': row.created_at.isoformat() if row.created_at else None,
         } for row in rows]
     })
@@ -459,20 +446,8 @@ def evaluation_votes():
 
 @api_bp.route('/feedback/<int:feedback_id>', methods=['PUT'])
 def update_feedback(feedback_id):
-    """Update feedback (logged users only)"""
-    if not g.user:
-        return jsonify({'error': 'Not logged in'}), 401
-
-    feedback = Feedback.query.get(feedback_id)
-    if not feedback or feedback.user_id != g.user.id:
-        return jsonify({'error': 'Feedback not found'}), 404
-
-    data = request.json
-    if 'vote_choice' in data:
-        feedback.vote_choice = data['vote_choice']
-
-    db.session.commit()
-    return jsonify({'success': True})
+    """Feedback updates are disabled; users should submit a new record instead."""
+    return jsonify({'error': 'Editing existing feedback is disabled. Please submit a new feedback record.'}), 403
 
 
 # ==================== MIGRATION ====================

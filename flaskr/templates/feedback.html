@@ -14,7 +14,7 @@
                 <!-- Q1: Submission Type -->
                 <div class="form-question">
                     <label class="question-title">How would you like to submit feedback? *</label>
-                    <div class="choice-grid">
+                    <div class="choice-grid submission-choice-grid">
                         <button 
                             type="button"
                             @click="submissionType = 'logged'"
@@ -56,7 +56,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Email Address</label>
+                        <label>Contact Email Address</label>
                         <input 
                             v-model="voterEmail"
                             type="email"
@@ -70,6 +70,9 @@
                 <!-- Q3: Evaluation Type -->
                 <div class="form-question">
                     <label class="question-title">What would you like to evaluate? *</label>
+                    <p class="question-desc" v-if="submissionType === 'logged' && hasSubmittedCurrentType">
+                        <span class="already-submitted-note">You have already submitted this evaluation, but you can submit it again.</span>
+                    </p>
                     <div class="choice-grid">
                         <button 
                             type="button"
@@ -115,9 +118,6 @@
 
                 <!-- Q4: Vote -->
                 <div class="form-question" v-if="feedbackType">
-                    <p class="question-desc" v-if="submissionType === 'logged' && hasSubmittedCurrentType">
-                        You have already submitted this type of evaluation. You can modify your past submission.
-                    </p>
                     <!-- Algo Evaluation -->
                     <div v-if="isAlgorithmFeedback">
                         <label class="question-title">
@@ -211,7 +211,7 @@
                         :disabled="!canSubmit"
                         :class="['button', 'is-primary', 'submit-btn', { 'is-loading': isSubmitting }]"
                     >
-                        Submit Feedback
+                        Submit
                     </button>
                 </div>
 
@@ -348,6 +348,58 @@
         font-size: 1rem;
     }
 
+    /* UI2 Unselected Buttons - Light background with dark text and frame */
+    .app-body.ui-light .choice-card {
+        background: #ffffff;
+        border-color: #dbe2ea;
+        color: #334155;
+    }
+
+    .app-body.ui-light .choice-card.is-selected {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
+
+    .app-body.ui-light .choice-card .choice-label,
+    .app-body.ui-light .choice-card .choice-desc {
+        color: #334155;
+    }
+
+    .app-body.ui-light .choice-card.is-selected .choice-label,
+    .app-body.ui-light .choice-card.is-selected .choice-desc {
+        color: #ffffff;
+    }
+
+    .app-body.ui-light .choice-card.is-disabled {
+        background: #f8fafc;
+        border-color: #dbe2ea;
+        color: #94a3b8;
+    }
+
+    /* UI2 Vote Buttons */
+    .app-body.ui-light .vote-btn {
+        background: #ffffff;
+        border-color: #dbe2ea;
+        color: #334155;
+    }
+
+    .app-body.ui-light .vote-btn.is-selected {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
+
+    .app-body.ui-light .vote-btn .vote-label,
+    .app-body.ui-light .vote-btn .vote-desc {
+        color: #334155;
+    }
+
+    .app-body.ui-light .vote-btn.is-selected .vote-label,
+    .app-body.ui-light .vote-btn.is-selected .vote-desc {
+        color: #ffffff;
+    }
+
     .choice-desc {
         font-size: 0.85rem;
         opacity: 0.8;
@@ -409,6 +461,16 @@
 
     .submit-status.success {
         color: #22c55e;
+    }
+
+    .app-body.ui-light .submit-status.success,
+    .app-body.ui-light .already-submitted-note {
+        color: #166534 !important;
+    }
+
+    .already-submitted-note {
+        color: #22c55e !important;
+        font-weight: 600;
     }
 
     .submit-status.error {
@@ -646,7 +708,7 @@ const app = createApp({
 
                 if (!response.ok) throw new Error('Failed to submit feedback');
                 const result = await response.json();
-                this.statusMessage = result.message || 'Submitted successfully. Thank you for submitting feedback.';
+                this.statusMessage = 'Submitted successfully! Thanks for your feedback.';
                 this.statusType = 'success';
                 if (this.feedbackType && !this.submittedTypes.includes(this.feedbackType)) {
                     this.submittedTypes.push(this.feedbackType);

@@ -3,55 +3,77 @@ const profileRoot = document.getElementById('profile-app');
 
 const app = createApp({
     data() {
+        const initialLoggedIn = profileRoot?.dataset.loggedIn === 'true';
+        const initialUsername = profileRoot?.dataset.initialUsername || '';
         return {
-            isLoggedIn: !!document.querySelector('meta[name="user"]'),
+            isLoggedIn: initialLoggedIn,
+            hasGoogleLinked: profileRoot?.dataset.hasGoogleLinked === 'true',
             profile: {
-                username: '',
+                username: initialUsername,
                 algorithm: 'algo1',
                 uiMode: '1'
             },
             genreScores: {},
             genres: [],
             ratings: [],
-            feedback: [],
             currentRatingsPage: 1,
-            currentFeedbackPage: 1,
             ratingsPerPage: 10,
-            feedbackPerPage: 10,
             feedbackProgress: {
                 completed_count: 0,
                 total_count: 4,
                 progress: []
             },
             statusMessage: '',
-            statusType: 'success'
+            statusType: 'success',
+            inlineStatus: {
+                saveUsername: false,
+                resetPreferences: false,
+                clearAllRatings: false
+            }
         };
     },
     computed: {
         hasRatings() {
             return this.ratings.length > 0;
         },
-        hasFeedback() {
-            return this.feedback.length > 0;
-        },
         paginatedRatings() {
             const start = (this.currentRatingsPage - 1) * this.ratingsPerPage;
             const end = start + this.ratingsPerPage;
             return this.ratings.slice(start, end);
         },
-        paginatedFeedback() {
-            const start = (this.currentFeedbackPage - 1) * this.feedbackPerPage;
-            const end = start + this.feedbackPerPage;
-            return this.feedback.slice(start, end);
-        },
         totalRatingsPages() {
             return Math.ceil(this.ratings.length / this.ratingsPerPage);
-        },
-        totalFeedbackPages() {
-            return Math.ceil(this.feedback.length / this.feedbackPerPage);
         }
     },
     methods: {
+        createGenreScoreDefaults() {
+            return this.genres.reduce((scores, genre) => {
+                scores[genre.id] = 0;
+                return scores;
+            }, {});
+        },
+
+        applyGenreScoreDefaults(overrides = {}) {
+            this.genreScores = {
+                ...this.createGenreScoreDefaults(),
+                ...overrides
+            };
+        },
+
+        applyUiTheme(uiValue) {
+            document.body.classList.remove('ui-dark', 'ui-light');
+            if (uiValue === '2') {
+                document.body.classList.add('ui-light');
+            } else {
+                document.body.classList.add('ui-dark');
+            }
+        },
+
+        persistUiMode(uiValue) {
+            document.cookie = `user_ui=${uiValue}; path=/`;
+            SettingsStorage.setUiMode(uiValue);
+        },
+
         getCookieValue(name) {
             const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const match = document.cookie.match(new RegExp('(?:^|; )' + escaped + '=([^;]*)'));
@@ -106,6 +128,7 @@ const app = createApp({
                     ...genre,
                     name: genre.name === '(no genres listed)' ? '(no genres listed)' : genre.name
                 }));
+                this.applyGenreScoreDefaults(this.genreScores);
             } catch (error) {
                 console.error('Error loading genres:', error);
             }
@@ -127,7 +150,9 @@ const app = createApp({
                 this.profile.username = data.user.username || profileRoot?.dataset.initialUsername || '';
                 this.profile.algorithm = data.user.algorithm_preference || 'algo1';
                 this.profile.uiMode = data.user.ui_preference || '1';
-                this.genreScores = data.user.genre_preferences || {};
+                this.applyUiTheme(this.profile.uiMode);
+                this.persistUiMode(this.profile.uiMode);
+                this.applyGenreScoreDefaults(data.user.genre_preferences || {});
             } catch (error) {
                 console.error('Error loading profile:', error);
                 this.profile.username = profileRoot?.dataset.initialUsername || this.profile.username;
@@ -195,19 +220,6 @@ const app = createApp({
             }
         },
 
-        async loadFeedback() {
-            if (!this.isLoggedIn) return;
-
-            try {
-                const response = await fetch('/api/feedback');
-                if (!response.ok) throw new Error('Failed to load feedback');
-                const data = await response.json();
-                this.feedback = data.feedback || [];
-            } catch (error) {
-                console.error('Error loading feedback:', error);
-            }
-        },
-
         async loadFeedbackProgress() {
             if (!this.isLoggedIn) {
                 return;
@@ -240,10 +252,10 @@ const app = createApp({
                 });
 
                 if (!response.ok) throw new Error('Failed to update profile');
-                this.showStatus('Profile updated successfully', 'success');
+                this.showInlineStatus('saveUsername');
             } catch (error) {
                 console.error('Error updating profile:', error);
-                this.showStatus('Error updating profile', 'error');
+                this.showStatus('Error updating username', 'error');
             }
         },
 
@@ -252,13 +264,13 @@ const app = createApp({
                 this.profile.algorithm = value;
             } else if (type === 'ui') {
                 this.profile.uiMode = value;
+                this.applyUiTheme(value);
+                this.persistUiMode(value);
             }
 
             if (!this.isLoggedIn) {
                 if (type === 'algorithm') {
                     SettingsStorage.setAlgorithm(value);
-                } else if (type === 'ui') {
-                    SettingsStorage.setUiMode(value);
                 }
                 return;
             }
@@ -311,8 +323,6 @@ const app = createApp({
         },
 
         async resetPreferences() {
-            if (!confirm('Reset algorithm, UI, and genre preferences?')) return;
-
             if (!this.isLoggedIn) {
                 SettingsStorage.setAlgorithm('algo1');
                 SettingsStorage.setUiMode('1');
@@ -323,8 +333,9 @@ const app = createApp({
                 document.cookie = 'user_genre_scores=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
                 this.profile.algorithm = 'algo1';
                 this.profile.uiMode = '1';
-                this.genreScores = {};
-                this.showStatus('Preferences reset', 'success');
+                this.applyUiTheme('1');
+                this.applyGenreScoreDefaults();
+                this.showInlineStatus('resetPreferences');
                 return;
             }
 
@@ -337,8 +348,9 @@ const app = createApp({
                 document.cookie = 'user_genre_scores=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
                 this.profile.algorithm = 'algo1';
                 this.profile.uiMode = '1';
-                this.genreScores = {};
-                this.showStatus('Preferences reset', 'success');
+                this.applyUiTheme('1');
+                this.applyGenreScoreDefaults();
+                this.showInlineStatus('resetPreferences');
             } catch (error) {
                 console.error('Error resetting preferences:', error);
                 this.showStatus('Error resetting preferences', 'error');
@@ -346,7 +358,8 @@ const app = createApp({
         },
 
         async deleteRating(ratingId) {
-            if (!confirm('Are you sure you want to delete this rating?')) return;
+            const row = this.ratings.find((r) => r.id === ratingId);
+            const movieId = row ? row.movie_id : null;
 
             if (!this.isLoggedIn) {
                 const idText = String(ratingId);
@@ -370,9 +383,23 @@ const app = createApp({
             }
 
             try {
-                const response = await fetch(`/api/ratings/${ratingId}`, { method: 'DELETE' });
+                const response = movieId
+                    ? await fetch(`/api/ratings/by-movie/${movieId}`, { method: 'DELETE' })
+                    : await fetch(`/api/ratings/${ratingId}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error('Failed to delete rating');
                 
+                if (movieId) {
+                    RatingStorage.deleteRating(movieId);
+                }
+                const remainingRecords = this.getGuestRateRecordsFromCookie().filter((record) => {
+                    const parts = record.split('|');
+                    return parseInt(parts[1], 10) !== movieId;
+                });
+                if (remainingRecords.length > 0) {
+                    this.writeGuestRateRecordsToCookie(remainingRecords);
+                } else {
+                    this.clearCookie('user_rates');
+                }
                 this.ratings = this.ratings.filter(r => r.id !== ratingId);
                 this.showStatus('Rating deleted', 'success');
             } catch (error) {
@@ -382,13 +409,11 @@ const app = createApp({
         },
 
         async clearAllRatings() {
-            if (!confirm('Are you sure you want to delete ALL ratings? This cannot be undone.')) return;
-
             if (!this.isLoggedIn) {
                 RatingStorage.clearAllRatings();
                 this.clearCookie('user_rates');
                 this.ratings = [];
-                this.showStatus('All ratings cleared', 'success');
+                this.showInlineStatus('clearAllRatings');
                 return;
             }
 
@@ -396,17 +421,14 @@ const app = createApp({
                 const response = await fetch('/api/ratings/clear', { method: 'POST' });
                 if (!response.ok) throw new Error('Failed to clear ratings');
                 
+                RatingStorage.clearAllRatings();
+                this.clearCookie('user_rates');
                 this.ratings = [];
-                this.showStatus('All ratings cleared', 'success');
+                this.showInlineStatus('clearAllRatings');
             } catch (error) {
                 console.error('Error clearing ratings:', error);
                 this.showStatus('Error clearing ratings', 'error');
             }
-        },
-
-        editFeedback(feedback) {
-            // Redirect to feedback edit page
-            window.location.href = `/feedback?edit=${feedback.id}`;
         },
 
         formatDate(dateString) {
@@ -423,8 +445,8 @@ const app = createApp({
             const types = {
                 'algo_ui1': 'Algorithm (UI 1)',
                 'algo_ui2': 'Algorithm (UI 2)',
-                'ui_algo1': 'UI (Algorithm 1)',
-                'ui_algo2': 'UI (Algorithm 2)'
+                'ui_algo1': 'UI (Algo 1)',
+                'ui_algo2': 'UI (Algo 2)'
             };
             return types[type] || type;
         },
@@ -435,6 +457,15 @@ const app = createApp({
             setTimeout(() => {
                 this.statusMessage = '';
             }, 3000);
+        },
+
+        showInlineStatus(key) {
+            if (this.inlineStatus.hasOwnProperty(key)) {
+                this.inlineStatus[key] = true;
+                setTimeout(() => {
+                    this.inlineStatus[key] = false;
+                }, 2000);
+            }
         }
     },
 
@@ -442,7 +473,6 @@ const app = createApp({
         this.loadGenres();
         this.loadUserProfile();
         this.loadRatings();
-        this.loadFeedback();
         this.loadFeedbackProgress();
     }
 });

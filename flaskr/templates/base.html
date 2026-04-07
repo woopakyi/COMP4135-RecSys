@@ -23,7 +23,7 @@
         }
 
         [v-cloak] {
-            display: none;
+            display: none !important;
         }
 
         /* Apply theme immediately before page renders */
@@ -122,7 +122,7 @@
             <!-- Right: Auth Actions -->
             <div class="app-navbar-right" style="display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0;">
                 {% if g.user %}
-                    <span style="color: var(--text-primary); font-weight: 500; font-size: 0.95rem;">{{ g.user.username }}</span>
+                    <span class="navbar-username" style="color: var(--text-primary); font-weight: 500; font-size: 0.95rem; display: none;">{{ g.user.username }}</span>
                     <a class="button is-small" href="{{ url_for('auth.logout') }}" 
                        style="padding: 0.45rem 0.9rem; border-radius: 10px; background: var(--chip-bg); color: var(--text-primary); border: 1px solid var(--chip-border); font-weight: 500; transition: all 0.2s ease;"
                        onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--chip-active-bg)'"
@@ -350,6 +350,20 @@
         background: color-mix(in srgb, var(--text-primary) 10%, transparent);
     }
 
+    .navbar-username {
+        display: none;
+        max-width: 190px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @media (min-width: 769px) {
+        .navbar-username {
+            display: inline-block !important;
+        }
+    }
+
     /* Footer styling */
     .footer {
         background: var(--footer-bg);
@@ -374,11 +388,21 @@
         }
 
         .app-navbar-right {
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            min-width: 0;
+            gap: 0.45rem;
         }
 
         .app-navbar-links {
             display: none;
+        }
+
+        .navbar-username {
+            display: none;
+        }
+
+        .app-navbar-right .button {
+            flex-shrink: 0;
         }
     }
 </style>

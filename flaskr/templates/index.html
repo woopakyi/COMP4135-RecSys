@@ -69,7 +69,7 @@
                     </div>
 
                     <div class="buttons is-centered mt-6 mb-0">
-                        <button class="button is-dark is-medium start-button" @click="startExperience">Start</button>
+                        <button class="button is-link is-light is-medium start-button" @click="startExperience">Save</button>
                     </div>
                 </div>
             </div>
@@ -82,7 +82,7 @@
                 <div class="movie-section">
                     <div class="section-title-block">
                         <h2 class="title is-4 mb-1">Original Movies</h2>
-                        <p class="has-text-grey">Rate the movies below from 0 to 10.</p>
+                        <p class="has-text-grey">Rate the movies below from 1 to 10.</p>
                     </div>
                     <div class="movie-stack original-movie-grid">
                         {% for movie in default_genres_movies %}
@@ -538,10 +538,10 @@
     }
 
     .hero-container {
-        max-width: 1220px;
+        max-width: none;
         margin: 0 auto;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .setup-panel {
@@ -627,6 +627,28 @@
     .choice-title {
         font-weight: 700;
         font-size: 1.05rem;
+    }
+
+    .app-body.ui-light .setup-choice-grid .choice-card {
+        background: #ffffff;
+        border-color: #dbe2ea;
+        color: #334155;
+    }
+
+    .app-body.ui-light .setup-choice-grid .choice-card.is-active {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
+
+    .app-body.ui-light .setup-choice-grid .choice-card .choice-title,
+    .app-body.ui-light .setup-choice-grid .choice-card .choice-desc {
+        color: #334155;
+    }
+
+    .app-body.ui-light .setup-choice-grid .choice-card.is-active .choice-title,
+    .app-body.ui-light .setup-choice-grid .choice-card.is-active .choice-desc {
+        color: #ffffff;
     }
 
     .choice-desc {
@@ -846,13 +868,19 @@
     }
 
     @media screen and (max-width: 768px) {
-        .genre-row {
-            grid-template-columns: 1fr;
-            gap: 0.5rem;
+        #original-movies-section {
+            padding-left: 0.35rem !important;
+            padding-right: 0.35rem !important;
+        }
+
+        #original-movies-section .container.is-fluid {
+            padding-left: 0.1rem;
+            padding-right: 0.1rem;
         }
 
         .movie-card {
             flex-direction: column;
+            width: 100%;
         }
 
         .setup-label {
@@ -865,12 +893,6 @@
             flex: 0 0 72px;
             aspect-ratio: 3 / 4;
             align-self: flex-start;
-        }
-
-        .setup-choice-grid {
-            grid-template-columns: 1fr;
-            max-width: 100%;
-            gap: 0.7rem;
         }
 
         .choice-card {
