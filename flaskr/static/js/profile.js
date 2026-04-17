@@ -1,5 +1,7 @@
 const { createApp, ref, computed, onMounted } = Vue;
 const profileRoot = document.getElementById('profile-app');
+const FEEDBACK_PARTICIPANT_PROFILE_KEY = 'feedback_participant_profile';
+const FEEDBACK_PARTICIPANT_TYPES_KEY = 'feedback_participant_submitted_types';
 
 const app = createApp({
     data() {
@@ -221,6 +223,11 @@ const app = createApp({
         },
 
         async loadFeedbackProgress() {
+            if (!this.isLoggedIn) {
+                this.feedbackProgress = this.getGuestFeedbackProgress();
+                return;
+            }
+
             try {
                 const response = await fetch('/api/feedback/progress');
                 if (!response.ok) throw new Error('Failed to load feedback progress');
@@ -229,6 +236,37 @@ const app = createApp({
             } catch (error) {
                 console.error('Error loading feedback progress:', error);
             }
+        },
+
+        getGuestFeedbackProgress() {
+            const allTypes = ['algo_ui1', 'algo_ui2', 'ui_algo1', 'ui_algo2'];
+            let submittedTypes = [];
+
+            try {
+                const rawSubmittedTypes = localStorage.getItem(FEEDBACK_PARTICIPANT_TYPES_KEY) || '[]';
+                const parsed = JSON.parse(rawSubmittedTypes);
+                submittedTypes = Array.isArray(parsed) ? parsed : [];
+
+                // Read the profile payload to keep the key contract consistent.
+                // The profile table currently renders completion chips only.
+                JSON.parse(localStorage.getItem(FEEDBACK_PARTICIPANT_PROFILE_KEY) || '{}');
+            } catch (_error) {
+                submittedTypes = [];
+            }
+
+            const submittedSet = new Set(submittedTypes.filter((item) => allTypes.includes(item)));
+            const progress = allTypes.map((feedbackType) => ({
+                feedback_type: feedbackType,
+                completed: submittedSet.has(feedbackType),
+                submission_count: null
+            }));
+
+            return {
+                scope: 'local_storage',
+                completed_count: progress.filter((item) => item.completed).length,
+                total_count: allTypes.length,
+                progress
+            };
         },
 
         async updateProfile() {

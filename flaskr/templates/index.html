@@ -474,7 +474,7 @@
                 if (uniqueLikedIds.length === 0 && !likedStack.querySelector('.has-text-grey.p-4')) {
                     const messageElement = document.createElement('p')
                     messageElement.className = 'has-text-grey p-4'
-                    messageElement.textContent = 'No liked movies yet. Ratings 8-10 appear here.'
+                    messageElement.textContent = 'No liked movies yet.'
                     likedStack.appendChild(messageElement)
                 }
 
@@ -1191,6 +1191,77 @@
         min-height: 140px;
     }
 
+    .app-body.ui-light .movie-stack,
+    .app-body.ui-light #liked-movie-stack {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        grid-auto-flow: row;
+        grid-auto-columns: unset;
+        overflow-x: visible;
+        overflow-y: visible;
+    }
+
+    .app-body.ui-light .movie-card,
+    .app-body.ui-light #liked-movie-stack .movie-card {
+        flex-direction: row;
+        align-items: center;
+        min-height: auto;
+        padding: 0.35rem;
+        gap: 0.6rem;
+        border-radius: 12px;
+    }
+
+    .app-body.ui-light #genre-movie-stack .movie-card,
+    .app-body.ui-light #recommended-movie-stack .movie-card,
+    .app-body.ui-light #similar-movie-stack .movie-card,
+    .app-body.ui-light #liked-movie-stack .movie-card {
+        min-height: 0;
+    }
+
+    .app-body.ui-light .movie-poster,
+    .app-body.ui-light #genre-movie-stack .movie-poster,
+    .app-body.ui-light #recommended-movie-stack .movie-poster,
+    .app-body.ui-light #similar-movie-stack .movie-poster,
+    .app-body.ui-light #liked-movie-stack .movie-poster {
+        width: 68px;
+        min-width: 68px;
+        height: 96px;
+        border-radius: 8px;
+    }
+
+    .app-body.ui-light .movie-copy,
+    .app-body.ui-light #liked-movie-stack .movie-copy {
+        padding: 0;
+        min-height: 0;
+        gap: 0.15rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .app-body.ui-light .movie-title {
+        min-height: 0;
+        font-size: 0.92rem;
+        line-height: 1.15;
+    }
+
+    .app-body.ui-light .movie-genres {
+        min-height: 0;
+    }
+
+    .app-body.ui-light .movie-rated-time {
+        display: none;
+    }
+
+    .app-body.ui-light .node-bar.line-nodes {
+        margin-top: 0.2rem;
+        padding: 0 0.06rem;
+    }
+
+    .app-body.ui-light .node-bar.line-nodes .node {
+        width: 0.95rem;
+        height: 0.95rem;
+        font-size: 0.47rem;
+    }
+
     .node-bar.line-nodes::before {
         content: '';
         position: absolute;
@@ -1363,6 +1434,51 @@
 
         #liked-movie-stack .movie-copy {
             min-height: 110px;
+        }
+    }
+
+    @media screen and (min-width: 1500px) {
+        .app-body.ui-light .movie-stack,
+        .app-body.ui-light #liked-movie-stack {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+    }
+
+    @media screen and (min-width: 1088px) and (max-width: 1499px) {
+        .app-body.ui-light .movie-stack,
+        .app-body.ui-light #liked-movie-stack {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+    }
+
+    @media screen and (min-width: 769px) and (max-width: 1087px) {
+        .app-body.ui-light .movie-stack,
+        .app-body.ui-light #liked-movie-stack {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media screen and (max-width: 768px) {
+        .app-body.ui-light .movie-stack,
+        .app-body.ui-light #liked-movie-stack {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .app-body.ui-light .movie-poster,
+        .app-body.ui-light #genre-movie-stack .movie-poster,
+        .app-body.ui-light #recommended-movie-stack .movie-poster,
+        .app-body.ui-light #similar-movie-stack .movie-poster,
+        .app-body.ui-light #liked-movie-stack .movie-poster {
+            width: 58px;
+            min-width: 58px;
+            height: 84px;
+        }
+    }
+
+    @media screen and (max-width: 420px) {
+        .app-body.ui-light .movie-stack,
+        .app-body.ui-light #liked-movie-stack {
+            grid-template-columns: 1fr;
         }
     }
 

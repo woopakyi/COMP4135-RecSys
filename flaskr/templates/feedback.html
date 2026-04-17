@@ -701,7 +701,7 @@ const app = createApp({
                 if (this.feedbackType && !this.submittedTypes.includes(this.feedbackType)) {
                     this.submittedTypes.push(this.feedbackType);
                 }
-                if (this.submissionType === 'participant') {
+                if (this.submissionType === 'participant' && !this.isLoggedIn) {
                     try {
                         localStorage.setItem(FEEDBACK_PARTICIPANT_PROFILE_KEY, JSON.stringify({
                             full_name: this.fullName.trim(),
