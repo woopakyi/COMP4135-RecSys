@@ -88,16 +88,18 @@
                     <div class="movie-stack original-movie-grid" id="genre-movie-stack">
                         {% for movie in default_genres_movies %}
                         <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
-                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
+                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover"
+                                 @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
                                 <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
-                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or '' }}</p>
-                                <div class="node-bar line-nodes">
-                                    {% for rate in range(1, 11) %}
-                                    <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
-                                    {% endfor %}
-                                </div>
+                                {% if movie['user_rating'] and movie['user_rating']|float > 0 %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or 'just rated' }} · {{ movie['user_rating'] | round(0) | int }}/10</p>
+                                {% else %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time is-empty">&nbsp;</p>
+                                {% endif %}
+                                <button type="button" class="button is-small is-light more-info-btn"
+                                        @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>More Info</button>
                             </div>
                         </div>
                         {% else %}
@@ -114,16 +116,18 @@
                     <div class="movie-stack" id="recommended-movie-stack">
                         {% for movie in recommendations %}
                         <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
-                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
+                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover"
+                                 @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
                                 <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
-                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or '' }}</p>
-                                <div class="node-bar line-nodes">
-                                    {% for rate in range(1, 11) %}
-                                    <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
-                                    {% endfor %}
-                                </div>
+                                {% if movie['user_rating'] and movie['user_rating']|float > 0 %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or 'just rated' }} · {{ movie['user_rating'] | round(0) | int }}/10</p>
+                                {% else %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time is-empty">&nbsp;</p>
+                                {% endif %}
+                                <button type="button" class="button is-small is-light more-info-btn"
+                                        @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>More Info</button>
                             </div>
                         </div>
                         {% else %}
@@ -140,16 +144,18 @@
                     <div class="movie-stack" id="similar-movie-stack">
                         {% for movie in likes_similars %}
                         <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
-                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
+                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover"
+                                 @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
                                 <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
-                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or '' }}</p>
-                                <div class="node-bar line-nodes">
-                                    {% for rate in range(1, 11) %}
-                                    <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
-                                    {% endfor %}
-                                </div>
+                                {% if movie['user_rating'] and movie['user_rating']|float > 0 %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or 'just rated' }} · {{ movie['user_rating'] | round(0) | int }}/10</p>
+                                {% else %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time is-empty">&nbsp;</p>
+                                {% endif %}
+                                <button type="button" class="button is-small is-light more-info-btn"
+                                        @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>More Info</button>
                             </div>
                         </div>
                         {% else %}
@@ -166,16 +172,18 @@
                     <div class="movie-stack" id="liked-movie-stack">
                         {% for movie in likes %}
                         <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
-                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
+                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover"
+                                 @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>
                             <div class="movie-copy">
                                 <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
                                 <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
-                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or '' }}</p>
-                                <div class="node-bar line-nodes">
-                                    {% for rate in range(1, 11) %}
-                                    <button type="button" class="node" :class="getMovieRating({{ movie['movieId'] }}) === {{ rate }} ? 'is-active' : ''" @click="saveMovieRating({{ movie['movieId'] }}, {{ rate }})">{{ rate }}</button>
-                                    {% endfor %}
-                                </div>
+                                {% if movie['user_rating'] and movie['user_rating']|float > 0 %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or 'just rated' }} · {{ movie['user_rating'] | round(0) | int }}/10</p>
+                                {% else %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time is-empty">&nbsp;</p>
+                                {% endif %}
+                                <button type="button" class="button is-small is-light more-info-btn"
+                                        @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>More Info</button>
                             </div>
                         </div>
                         {% else %}
@@ -191,6 +199,38 @@
                     <p class="has-text-grey">Pick an algorithm and UI above, then press Start to unlock movie cards.</p>
                 </div>
             </template>
+
+            <div class="modal" :class="{ 'is-active': isMovieModalOpen }">
+                <div class="modal-background" @click="closeMovieDetails"></div>
+                <div class="modal-card movie-modal-card" v-if="activeMovie">
+                    <header class="modal-card-head">
+                        <p class="modal-card-title">Movie Details</p>
+                        <button class="delete" aria-label="close" @click="closeMovieDetails"></button>
+                    </header>
+                    <section class="modal-card-body movie-modal-body">
+                        <div class="movie-modal-layout">
+                            <img class="movie-modal-poster" :src="activeMovie.cover_url || 'https://placehold.co/480x640?text=No+Cover'" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover">
+                            <div class="movie-modal-content">
+                                <h3 class="title is-4 mb-2">[[ activeMovie.title || 'Untitled' ]]</h3>
+                                <p class="is-size-6 mb-1"><strong>Year:</strong> [[ activeMovie.year || 'Unknown' ]]</p>
+                                <p class="is-size-6 mb-1"><strong>Genres:</strong> [[ activeMovie.genresText || 'N/A' ]]</p>
+                                <p class="is-size-6 mb-4"><strong>Overview:</strong> [[ activeMovie.overview || 'No overview found.' ]]</p>
+
+                                <div class="modal-rating-block">
+                                    <p class="is-size-6 has-text-weight-semibold mb-1">Rate this movie (1-10)</p>
+                                    <div class="node-bar line-nodes">
+                                        <button type="button" class="node" v-for="rate in [1,2,3,4,5,6,7,8,9,10]" :key="'modal-rate-' + rate" :class="getMovieRating(activeMovie.movieId) === rate ? 'is-active' : ''" @click="saveMovieRating(activeMovie.movieId, rate)">[[ rate ]]</button>
+                                    </div>
+                                    <p class="is-size-7 has-text-link mt-2" v-if="activeMovie.rated_time_ago">[[ activeMovie.rated_time_ago ]]</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <footer class="modal-card-foot">
+                        <button class="button" @click="closeMovieDetails">Close</button>
+                    </footer>
+                </div>
+            </div>
         </div>
     </section>
 </div>
@@ -225,6 +265,8 @@
             const originalMoviesSection = ref(null)
             const genreScores = ref(bootstrapData.genreScores || {})
             const genreIds = Array.isArray(bootstrapData.genreIds) ? bootstrapData.genreIds : []
+            const isMovieModalOpen = ref(false)
+            const activeMovie = ref(null)
 
             // Keep every genre slider anchored to 0 when there is no saved score.
             genreIds.forEach((genreId) => {
@@ -273,29 +315,43 @@
                 if (!text) {
                     return
                 }
-                let ratedLine = cardElement.querySelector('.js-rated-time')
-                if (!ratedLine) {
-                    ratedLine = document.createElement('p')
-                    ratedLine.className = 'is-size-7 has-text-link movie-rated-time js-rated-time'
-                    const nodeBar = cardElement.querySelector('.node-bar')
-                    if (nodeBar && nodeBar.parentNode) {
-                        nodeBar.parentNode.insertBefore(ratedLine, nodeBar)
-                    }
+                const ratedLine = cardElement.querySelector('.js-rated-time')
+                if (ratedLine) {
+                    const movieId = Number(cardElement.dataset.movieId || 0)
+                    const score = getMovieRating(movieId)
+                    ratedLine.textContent = `${text} · ${score}/10`
+                    ratedLine.classList.remove('is-empty')
                 }
-                ratedLine.textContent = text
             }
 
-            function bindCardNodeClicks(cardElement, movieId) {
-                const nodes = cardElement.querySelectorAll('.node')
-                nodes.forEach((nodeElement) => {
-                    const parsedRate = Number(nodeElement.textContent || 0)
-                    if (!Number.isInteger(parsedRate) || parsedRate < 1 || parsedRate > 10) {
-                        return
-                    }
-                    nodeElement.addEventListener('click', () => {
-                        saveMovieRating(movieId, parsedRate)
-                    })
-                })
+            function normalizeGenresText(rawGenres) {
+                if (Array.isArray(rawGenres)) {
+                    return rawGenres.join(', ')
+                }
+                if (typeof rawGenres === 'string') {
+                    return rawGenres.split('|').join(', ')
+                }
+                return ''
+            }
+
+            function openMovieDetails(movie) {
+                if (!movie || !movie.movieId) {
+                    return
+                }
+                activeMovie.value = {
+                    movieId: Number(movie.movieId),
+                    title: movie.title || '',
+                    year: movie.year || '',
+                    genresText: normalizeGenresText(movie.genres),
+                    overview: movie.overview || 'No overview found.',
+                    cover_url: movie.cover_url || '',
+                    rated_time_ago: movie.rated_time_ago || ''
+                }
+                isMovieModalOpen.value = true
+            }
+
+            function closeMovieDetails() {
+                isMovieModalOpen.value = false
             }
 
             function refreshCardNodeState(cardElement, movieId) {
@@ -327,6 +383,7 @@
                 posterElement.onerror = () => {
                     posterElement.src = 'https://placehold.co/480x640?text=No+Cover'
                 }
+                posterElement.addEventListener('click', () => openMovieDetails(movie))
                 cardElement.appendChild(posterElement)
 
                 const copyElement = document.createElement('div')
@@ -339,28 +396,26 @@
 
                 const genresElement = document.createElement('p')
                 genresElement.className = 'is-size-7 movie-genres'
-                genresElement.textContent = Array.isArray(movie.genres) ? movie.genres.join(', ') : ''
+                genresElement.textContent = normalizeGenresText(movie.genres)
                 copyElement.appendChild(genresElement)
 
                 const ratedElement = document.createElement('p')
                 ratedElement.className = 'is-size-7 has-text-link movie-rated-time js-rated-time'
-                ratedElement.textContent = movie.rated_time_ago || ''
+                if (Number(movie.user_rating || 0) > 0) {
+                    const ratedText = movie.rated_time_ago ? `${movie.rated_time_ago} · ${Math.round(Number(movie.user_rating))}/10` : `just rated · ${Math.round(Number(movie.user_rating))}/10`
+                    ratedElement.textContent = ratedText
+                } else {
+                    ratedElement.innerHTML = '&nbsp;'
+                    ratedElement.classList.add('is-empty')
+                }
                 copyElement.appendChild(ratedElement)
 
-                const nodeBarElement = document.createElement('div')
-                nodeBarElement.className = 'node-bar line-nodes'
-                for (let rate = 1; rate <= 10; rate += 1) {
-                    const nodeElement = document.createElement('button')
-                    nodeElement.type = 'button'
-                    nodeElement.className = 'node'
-                    nodeElement.textContent = String(rate)
-                    if (getMovieRating(movieId) === rate) {
-                        nodeElement.classList.add('is-active')
-                    }
-                    nodeElement.addEventListener('click', () => saveMovieRating(movieId, rate))
-                    nodeBarElement.appendChild(nodeElement)
-                }
-                copyElement.appendChild(nodeBarElement)
+                const infoButton = document.createElement('button')
+                infoButton.type = 'button'
+                infoButton.className = 'button is-small is-light more-info-btn'
+                infoButton.textContent = 'More Info'
+                infoButton.addEventListener('click', () => openMovieDetails(movie))
+                copyElement.appendChild(infoButton)
 
                 cardElement.appendChild(copyElement)
                 return cardElement
@@ -454,7 +509,21 @@
                         if (sourceCard) {
                             likedCard = sourceCard.cloneNode(true)
                             likedCard.dataset.movieId = String(movieId)
-                            bindCardNodeClicks(likedCard, movieId)
+
+                            const openFromCard = () => {
+                                openMovieDetails({
+                                    movieId,
+                                    title: likedCard.querySelector('.movie-title')?.textContent || '',
+                                    year: '',
+                                    genres: likedCard.querySelector('.movie-genres')?.textContent || '',
+                                    overview: 'No overview found.',
+                                    cover_url: likedCard.querySelector('.movie-poster')?.getAttribute('src') || '',
+                                    rated_time_ago: ''
+                                })
+                            }
+                            likedCard.querySelector('.movie-poster')?.addEventListener('click', openFromCard)
+                            likedCard.querySelector('.more-info-btn')?.addEventListener('click', openFromCard)
+
                             likedStack.prepend(likedCard)
                         }
                     }
@@ -751,6 +820,10 @@
                 saveRatingsToLocalStorage()
                 syncLikedSection(movieId, timestamp)
                 await refreshComputedSections()
+
+                if (activeMovie.value && Number(activeMovie.value.movieId) === Number(movieId)) {
+                    activeMovie.value.rated_time_ago = formatRatedTime(timestamp)
+                }
             }
 
             function clearMovieRating(movieId) {
@@ -761,6 +834,10 @@
                     saveRatingsToLocalStorage()
                     syncLikedSection(movieId, Math.floor(Date.now() / 1000))
                     refreshComputedSections()
+
+                    if (activeMovie.value && Number(activeMovie.value.movieId) === Number(movieId)) {
+                        activeMovie.value.rated_time_ago = ''
+                    }
                 }
             }
 
@@ -770,6 +847,8 @@
                 setupComplete,
                 originalMoviesSection,
                 genreScores,
+                isMovieModalOpen,
+                activeMovie,
                 selectAlgorithm,
                 selectUi,
                 startExperience,
@@ -777,6 +856,8 @@
                 saveMovieRating,
                 clearMovieRating,
                 getMovieRating,
+                openMovieDetails,
+                closeMovieDetails,
             }
         }
     })
@@ -787,7 +868,7 @@
 
 <style>
     #app {
-        max-width: 1320px;
+        max-width: min(1480px, 98vw);
         margin: 0 auto;
         width: 100%;
         padding: 1.5rem;
@@ -1093,6 +1174,49 @@
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     }
 
+    .app-body.ui-dark .movie-stack,
+    .app-body.ui-dark #liked-movie-stack {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(180px, 220px);
+        grid-template-columns: none;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 0.35rem;
+        scrollbar-width: thin;
+    }
+
+    .app-body.ui-dark #genre-movie-stack .movie-card,
+    .app-body.ui-dark #recommended-movie-stack .movie-card,
+    .app-body.ui-dark #similar-movie-stack .movie-card,
+    .app-body.ui-dark #liked-movie-stack .movie-card {
+        min-height: 0;
+    }
+
+    .app-body.ui-dark #genre-movie-stack .movie-copy,
+    .app-body.ui-dark #recommended-movie-stack .movie-copy,
+    .app-body.ui-dark #similar-movie-stack .movie-copy,
+    .app-body.ui-dark #liked-movie-stack .movie-copy {
+        min-height: 0;
+        flex: 1;
+    }
+
+    .app-body.ui-dark .movie-stack::-webkit-scrollbar,
+    .app-body.ui-dark #liked-movie-stack::-webkit-scrollbar {
+        height: 10px;
+    }
+
+    .app-body.ui-dark .movie-stack::-webkit-scrollbar-thumb,
+    .app-body.ui-dark #liked-movie-stack::-webkit-scrollbar-thumb {
+        background: var(--border-soft);
+        border-radius: 999px;
+    }
+
+    .app-body.ui-dark .movie-stack::-webkit-scrollbar-track,
+    .app-body.ui-dark #liked-movie-stack::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
     #liked-movie-stack {
         display: grid;
         grid-auto-flow: column;
@@ -1146,32 +1270,50 @@
         min-width: 0;
         display: flex;
         flex-direction: column;
-        gap: 0.12rem;
+        gap: 0.06rem;
         padding: 0.52rem 0.6rem 0.6rem;
         height: 100%;
+    }
+
+    .more-info-btn {
+        margin-top: auto;
+        margin-left: auto;
+        width: fit-content;
     }
 
     .movie-title {
         font-size: 1.02rem;
         line-height: 1.2;
-        min-height: 2.3em;
+        height: 2.4em;
+        overflow: hidden;
     }
 
     .movie-genres {
         color: var(--text-secondary);
-        min-height: 2.05em;
+        height: 2.2em;
         line-height: 1.15;
         overflow: hidden;
     }
 
     .movie-rated-time {
-        height: 1.15rem;
-        line-height: 1.15rem;
+        min-height: 2.4em;
+        line-height: 1.2;
         margin-bottom: 0;
+        display: -webkit-box;
+        line-clamp: 2;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .movie-rated-time:empty::before {
         content: '\00a0';
+    }
+
+    .movie-rated-time.is-empty {
+        color: transparent !important;
     }
 
     .node-bar.line-nodes {
@@ -1193,7 +1335,7 @@
 
     .app-body.ui-light .movie-stack,
     .app-body.ui-light #liked-movie-stack {
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        grid-template-columns: repeat(4, 1fr);
         grid-auto-flow: row;
         grid-auto-columns: unset;
         overflow-x: visible;
@@ -1232,23 +1374,53 @@
     .app-body.ui-light #liked-movie-stack .movie-copy {
         padding: 0;
         min-height: 0;
-        gap: 0.15rem;
+        gap: 0.08rem;
         width: 100%;
         justify-content: center;
     }
 
+    .app-body.ui-light #app {
+        max-width: min(1720px, 98vw);
+    }
+
     .app-body.ui-light .movie-title {
-        min-height: 0;
+        height: 2.4em;
         font-size: 0.92rem;
         line-height: 1.15;
+        overflow: hidden;
     }
 
     .app-body.ui-light .movie-genres {
-        min-height: 0;
+        height: 2.2em;
+        overflow: hidden;
     }
 
     .app-body.ui-light .movie-rated-time {
-        display: none;
+        color: #3b82f6 !important;
+        min-height: 2.4em;
+        line-height: 1.2;
+        font-size: 0.78rem;
+        margin-bottom: 0.08rem;
+        word-break: break-word;
+        white-space: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .app-body.ui-light .more-info-btn {
+        margin-top: 0.06rem;
+    }
+
+    .app-body.ui-dark .movie-copy {
+        gap: 0.14rem;
+    }
+
+    .app-body.ui-dark .movie-rated-time {
+        margin-bottom: 0.09rem;
+    }
+
+    .app-body.ui-dark .more-info-btn {
+        margin-top: 0.04rem;
     }
 
     .app-body.ui-light .node-bar.line-nodes {
@@ -1288,6 +1460,101 @@
         border-radius: 18px;
         border: 1px dashed var(--empty-border);
         background: var(--empty-bg);
+    }
+
+    .movie-modal-card {
+        width: min(880px, calc(100vw - 2rem));
+    }
+
+    .app-body.ui-dark .movie-modal-card {
+        background: #111a2e;
+        color: #e2e8f0;
+    }
+
+    .app-body.ui-dark .movie-modal-card .modal-card-head,
+    .app-body.ui-dark .movie-modal-card .modal-card-foot {
+        background: #111a2e;
+        border-color: #24324a;
+    }
+
+    .modal-card-foot {
+        justify-content: center;
+    }
+
+    .app-body.ui-dark .movie-modal-card .modal-card-body,
+    .app-body.ui-dark .movie-modal-body {
+        background: #111a2e;
+        color: #e2e8f0;
+    }
+
+    .app-body.ui-dark .movie-modal-card .modal-card-title,
+    .app-body.ui-dark .movie-modal-card .title,
+    .app-body.ui-dark .movie-modal-card strong,
+    .app-body.ui-dark .movie-modal-card p,
+    .app-body.ui-dark .movie-modal-card .has-text-link {
+        color: #e2e8f0;
+    }
+
+    .app-body.ui-dark .movie-modal-card .button,
+    .app-body.ui-dark .movie-modal-card .delete {
+        color: #e2e8f0;
+        background-color: transparent;
+    }
+
+    .app-body.ui-dark .movie-modal-card .button.is-light {
+        background: #16233b;
+        color: #e2e8f0;
+        border-color: #334155;
+    }
+
+    .movie-modal-body {
+        max-height: 78vh;
+        overflow-y: auto;
+    }
+
+    .movie-modal-layout {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .movie-modal-poster {
+        width: 100%;
+        border-radius: 10px;
+        object-fit: cover;
+        aspect-ratio: 2 / 3;
+        background: #0f172a;
+    }
+
+    .movie-modal-content {
+        min-width: 0;
+    }
+
+    .modal-rating-block .node-bar.line-nodes {
+        justify-content: space-between;
+        gap: 0;
+        padding: 0 0.12rem;
+        width: min(100%, 430px);
+        margin: 0 auto;
+    }
+
+    .modal-rating-block {
+        text-align: center;
+        width: 100%;
+        max-width: 560px;
+        margin: 0 auto;
+    }
+
+    .modal-rating-block .is-size-6.has-text-weight-semibold {
+        text-align: left;
+        width: 100%;
+    }
+
+    .modal-rating-block .node {
+        width: 1.35rem;
+        height: 1.35rem;
+        font-size: 0.54rem;
     }
 
     @media screen and (max-width: 768px) {
@@ -1391,6 +1658,15 @@
             font-size: 0.7rem;
             min-width: 1.8rem;
         }
+
+        .movie-modal-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .movie-modal-poster {
+            width: min(220px, 70%);
+            margin: 0 auto;
+        }
     }
 
     @media screen and (min-width: 769px) and (max-width: 1087px) {
@@ -1437,17 +1713,10 @@
         }
     }
 
-    @media screen and (min-width: 1500px) {
+    @media screen and (min-width: 1088px) {
         .app-body.ui-light .movie-stack,
         .app-body.ui-light #liked-movie-stack {
-            grid-template-columns: repeat(6, minmax(0, 1fr));
-        }
-    }
-
-    @media screen and (min-width: 1088px) and (max-width: 1499px) {
-        .app-body.ui-light .movie-stack,
-        .app-body.ui-light #liked-movie-stack {
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
         }
     }
 
