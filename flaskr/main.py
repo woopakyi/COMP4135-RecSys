@@ -15,7 +15,7 @@ bp = Blueprint('main', __name__, url_prefix='/')
 movies, genres, rates = loadData()
 
 # set the boolean from False to True if you have finished developing the corresponding algorithm.
-algo1_is_done = False #FM
+algo1_is_done = True #FM
 algo2_is_done = False #SASRec
 
 
