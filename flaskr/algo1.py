@@ -431,3 +431,17 @@ def get_liked_movie_ids(user_rates):
         if rating >= 8:
             liked_ids.append(movie_id)
     return liked_ids
+
+
+def get_disliked_movie_ids(user_rates):
+    """Disliked section source IDs (ratings between 1 and 3 inclusive)."""
+    disliked_ids = []
+    for rate in user_rates:
+        parts = rate.split('|')
+        if len(parts) < 3:
+            continue
+        movie_id = int(parts[1])
+        rating = int(parts[2])
+        if 1 <= rating <= 3:
+            disliked_ids.append(movie_id)
+    return disliked_ids

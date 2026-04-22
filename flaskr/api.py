@@ -200,11 +200,14 @@ def refresh_home_sections():
         getRecommendationBy,
         getLikedSimilarBy,
         getUserLikesBy,
+        getUserDislikesBy,
         get_liked_movie_ids,
+        get_disliked_movie_ids,
         enrich_movies_with_user_feedback,
     )
 
     liked_movie_ids = get_liked_movie_ids(user_rates, selected_algorithm)
+    disliked_movie_ids = get_disliked_movie_ids(user_rates, selected_algorithm)
 
     default_genres_movies = getMoviesByGenres(user_genres, selected_algorithm)[:12]
     if len(default_genres_movies) == 0:
@@ -213,11 +216,13 @@ def refresh_home_sections():
     recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm)
     likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)
     likes_movies = getUserLikesBy([str(movie_id) for movie_id in liked_movie_ids])
+    dislikes_movies = getUserDislikesBy([str(movie_id) for movie_id in disliked_movie_ids])
 
     default_genres_movies = enrich_movies_with_user_feedback(default_genres_movies, user_rates)
     recommendations_movies = enrich_movies_with_user_feedback(recommendations_movies, user_rates)
     likes_similar_movies = enrich_movies_with_user_feedback(likes_similar_movies, user_rates)
     likes_movies = enrich_movies_with_user_feedback(likes_movies, user_rates)
+    dislikes_movies = enrich_movies_with_user_feedback(dislikes_movies, user_rates)
 
     return jsonify({
         'default_genres_movies': default_genres_movies,
@@ -226,6 +231,7 @@ def refresh_home_sections():
         'likes_similars': likes_similar_movies,
         'likes_similar_message': likes_similar_message,
         'likes': likes_movies,
+        'dislikes': dislikes_movies,
     })
 
 

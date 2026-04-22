@@ -62,6 +62,8 @@ def index():
         likes_similar_movies = []
         likes_similar_message = 'Choose an algorithm and UI, then save to begin.'
         likes_movies = []
+        disliked_movies = []
+        disliked_message = 'Choose an algorithm and UI, then save to begin.'
 
         if setup_complete:
             default_genres_movies = getMoviesByGenres(user_genres, selected_algorithm)[:12]
@@ -71,11 +73,14 @@ def index():
             recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm)
             likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)
             likes_movies = getUserLikesBy([str(movie_id) for movie_id in liked_movie_ids])
+            disliked_movie_ids = get_disliked_movie_ids(user_rates, selected_algorithm)
+            disliked_movies = getUserDislikesBy([str(movie_id) for movie_id in disliked_movie_ids])
 
             default_genres_movies = enrich_movies_with_user_feedback(default_genres_movies, user_rates)
             recommendations_movies = enrich_movies_with_user_feedback(recommendations_movies, user_rates)
             likes_similar_movies = enrich_movies_with_user_feedback(likes_similar_movies, user_rates)
             likes_movies = enrich_movies_with_user_feedback(likes_movies, user_rates)
+            disliked_movies = enrich_movies_with_user_feedback(disliked_movies, user_rates)
     except Exception:
         selected_algorithm = request.cookies.get('user_algorithm', '')
         selected_ui = request.cookies.get('user_ui', '')
@@ -91,6 +96,8 @@ def index():
         likes_similar_movies = []
         likes_similar_message = 'Choose an algorithm and UI, then save to begin.'
         likes_movies = []
+        disliked_movies = []
+        disliked_message = 'Choose an algorithm and UI, then save to begin.'
 
     return render_template('index.html',
                            genres=default_genres,
@@ -107,6 +114,8 @@ def index():
                            likes_similars=likes_similar_movies,
                            likes_similar_message=likes_similar_message,
                            likes=likes_movies,
+                           dislikes=disliked_movies,
+                           dislikes_message=disliked_message,
                            )
 
 
@@ -285,16 +294,55 @@ def get_liked_movie_ids(user_rates, selected_algorithm='1'):
 
 
 def get_liked_movie_ids_default(user_rates):
-    liked_ids = []
+    return _get_movie_ids_by_rating_range(user_rates, 8, 10)
+
+
+def get_disliked_movie_ids(user_rates, selected_algorithm='1'):
+    if selected_algorithm == '1' and algo1_is_done:
+        from . import algo1 as algo1_module
+        return algo1_module.get_disliked_movie_ids(user_rates)
+    if selected_algorithm == '2' and algo2_is_done:
+        from . import algo2 as algo2_module
+        return algo2_module.get_disliked_movie_ids(user_rates)
+    return get_disliked_movie_ids_default(user_rates)
+
+
+def get_disliked_movie_ids_default(user_rates):
+    return _get_movie_ids_by_rating_range(user_rates, 1, 3)
+
+
+def _get_movie_ids_by_rating_range(user_rates, min_rating, max_rating):
+    matched_ids = []
     for rate in user_rates:
         parts = rate.split('|')
         if len(parts) < 3:
             continue
         movie_id = int(parts[1])
         rating = int(parts[2])
-        if rating >= 8:
-            liked_ids.append(movie_id)
-    return liked_ids
+        if min_rating <= rating <= max_rating:
+            matched_ids.append(movie_id)
+    return matched_ids
+
+
+def getUserDislikesBy(user_likes):
+    results = []
+
+    if len(user_likes) > 0:
+        mask = movies['movieId'].isin([int(movieId) for movieId in user_likes])
+        results = movies.loc[mask]
+
+        original_orders = pd.DataFrame()
+        for _id in user_likes:
+            movie = results.loc[results['movieId'] == int(_id)]
+            if len(original_orders) == 0:
+                original_orders = movie
+            else:
+                original_orders = pd.concat([movie, original_orders])
+        results = original_orders
+
+    if len(results) > 0:
+        return results.to_dict('records')
+    return results
 
 def is_genre_match(movie_genres, interested_genres):
     return bool(set(movie_genres).intersection(set(interested_genres)))

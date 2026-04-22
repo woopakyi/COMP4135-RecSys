@@ -191,6 +191,34 @@
                         {% endfor %}
                     </div>
                 </div>
+
+                <div class="movie-section">
+                    <div class="section-title-block">
+                        <h2 class="title is-4 mb-1">Disliked</h2>
+                        <p class="has-text-grey">Movies you rated low.</p>
+                    </div>
+                    <div class="movie-stack" id="disliked-movie-stack">
+                        {% for movie in dislikes %}
+                        <div class="movie-card" data-movie-id="{{ movie['movieId'] }}">
+                            <img class="movie-poster" src="{{ movie['cover_url'] }}" onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="movie cover"
+                                 @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>
+                            <div class="movie-copy">
+                                <p class="has-text-weight-semibold movie-title">{{ movie['title'] }}</p>
+                                <p class="is-size-7 movie-genres">{{ movie['genres'] | join(', ') }}</p>
+                                {% if movie['user_rating'] and movie['user_rating']|float > 0 %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time">{{ movie['rated_time_ago'] or 'just rated' }} · {{ movie['user_rating'] | round(0) | int }}/10</p>
+                                {% else %}
+                                <p class="is-size-7 has-text-link movie-rated-time js-rated-time is-empty">&nbsp;</p>
+                                {% endif %}
+                                <button type="button" class="button is-small is-light more-info-btn"
+                                        @click='openMovieDetails({"movieId": {{ movie["movieId"] }}, "title": {{ movie["title"] | tojson }}, "year": {{ movie["year"] | tojson }}, "genres": {{ movie["genres"] | tojson }}, "overview": {{ movie["overview"] | tojson }}, "cover_url": {{ movie["cover_url"] | tojson }}, "rated_time_ago": {{ (movie["rated_time_ago"] or "") | tojson }}})'>More Info</button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="has-text-grey p-4">No disliked movies yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
             </template>
 
             <template v-else>
@@ -464,18 +492,19 @@
                     renderMovieStack('recommended-movie-stack', payload.recommendations || [], 'No recommendations yet.')
                     renderMovieStack('similar-movie-stack', payload.likes_similars || [], 'No similar items yet.')
                     renderMovieStack('liked-movie-stack', payload.likes || [], 'No liked movies yet. Ratings 8-10 appear here.')
+                    renderMovieStack('disliked-movie-stack', payload.dislikes || [], 'No disliked movies yet. Ratings 1-3 appear here.')
                 } catch (_err) {
                     // Ignore refresh errors and keep local state.
                 }
             }
 
-            function syncLikedSection(changedMovieId, timestampSeconds) {
-                const likedStack = document.getElementById('liked-movie-stack')
-                if (!likedStack) {
+            function syncRatedSection(stackId, minRating, maxRating, emptyText) {
+                const stackElement = document.getElementById(stackId)
+                if (!stackElement) {
                     return
                 }
 
-                const likedIds = []
+                const matchingIds = []
                 userRates.value.forEach((record) => {
                     const parts = record.split('|')
                     if (parts.length < 3) {
@@ -483,77 +512,77 @@
                     }
                     const movieId = Number(parts[1])
                     const rating = Number(parts[2])
-                    if (rating >= 8 && Number.isInteger(movieId)) {
-                        likedIds.push(movieId)
+                    if (rating >= minRating && rating <= maxRating && Number.isInteger(movieId)) {
+                        matchingIds.push(movieId)
                     }
                 })
 
-                const uniqueLikedIds = Array.from(new Set(likedIds))
+                const uniqueIds = Array.from(new Set(matchingIds))
 
-                Array.from(likedStack.querySelectorAll('.movie-card[data-movie-id]')).forEach((cardElement) => {
+                Array.from(stackElement.querySelectorAll('.movie-card[data-movie-id]')).forEach((cardElement) => {
                     const movieId = Number(cardElement.dataset.movieId)
-                    if (!uniqueLikedIds.includes(movieId)) {
+                    if (!uniqueIds.includes(movieId)) {
                         cardElement.remove()
                     }
                 })
 
-                uniqueLikedIds.forEach((movieId) => {
-                    let likedCard = likedStack.querySelector(`.movie-card[data-movie-id="${movieId}"]`)
-                    if (!likedCard) {
+                uniqueIds.forEach((movieId) => {
+                    let movieCard = stackElement.querySelector(`.movie-card[data-movie-id="${movieId}"]`)
+                    if (!movieCard) {
                         const sourceCard = Array.from(document.querySelectorAll('.movie-card[data-movie-id]'))
                             .find((cardElement) => {
                                 const sameMovie = Number(cardElement.dataset.movieId) === movieId
-                                const isInLiked = cardElement.closest('#liked-movie-stack')
-                                return sameMovie && !isInLiked
+                                const isInTargetStack = cardElement.closest('#' + stackId)
+                                return sameMovie && !isInTargetStack
                             })
                         if (sourceCard) {
-                            likedCard = sourceCard.cloneNode(true)
-                            likedCard.dataset.movieId = String(movieId)
+                            movieCard = sourceCard.cloneNode(true)
+                            movieCard.dataset.movieId = String(movieId)
 
                             const openFromCard = () => {
                                 openMovieDetails({
                                     movieId,
-                                    title: likedCard.querySelector('.movie-title')?.textContent || '',
+                                    title: movieCard.querySelector('.movie-title')?.textContent || '',
                                     year: '',
-                                    genres: likedCard.querySelector('.movie-genres')?.textContent || '',
+                                    genres: movieCard.querySelector('.movie-genres')?.textContent || '',
                                     overview: 'No overview found.',
-                                    cover_url: likedCard.querySelector('.movie-poster')?.getAttribute('src') || '',
+                                    cover_url: movieCard.querySelector('.movie-poster')?.getAttribute('src') || '',
                                     rated_time_ago: ''
                                 })
                             }
-                            likedCard.querySelector('.movie-poster')?.addEventListener('click', openFromCard)
-                            likedCard.querySelector('.more-info-btn')?.addEventListener('click', openFromCard)
+                            movieCard.querySelector('.movie-poster')?.addEventListener('click', openFromCard)
+                            movieCard.querySelector('.more-info-btn')?.addEventListener('click', openFromCard)
 
-                            likedStack.prepend(likedCard)
+                            stackElement.prepend(movieCard)
                         }
                     }
 
-                    if (likedCard) {
+                    if (movieCard) {
                         const rateRecord = userRates.value.find((record) => Number(record.split('|')[1]) === movieId)
-                        const rateTimestamp = rateRecord ? Number(rateRecord.split('|')[3] || 0) : timestampSeconds
-                        refreshCardNodeState(likedCard, movieId)
-                        ensureRatedTimeInCard(likedCard, rateTimestamp)
+                        const rateTimestamp = rateRecord ? Number(rateRecord.split('|')[3] || 0) : 0
+                        refreshCardNodeState(movieCard, movieId)
+                        ensureRatedTimeInCard(movieCard, rateTimestamp)
                     }
                 })
 
-                const emptyMessage = likedStack.querySelector('.has-text-grey.p-4')
-                if (uniqueLikedIds.length > 0 && emptyMessage) {
+                const emptyMessage = stackElement.querySelector('.has-text-grey.p-4')
+                if (uniqueIds.length > 0 && emptyMessage) {
                     emptyMessage.remove()
                 }
-                if (uniqueLikedIds.length === 0 && !likedStack.querySelector('.has-text-grey.p-4')) {
+                if (uniqueIds.length === 0 && !stackElement.querySelector('.has-text-grey.p-4')) {
                     const messageElement = document.createElement('p')
                     messageElement.className = 'has-text-grey p-4'
-                    messageElement.textContent = 'No liked movies yet.'
-                    likedStack.appendChild(messageElement)
+                    messageElement.textContent = emptyText
+                    stackElement.appendChild(messageElement)
                 }
+            }
 
-                if (changedMovieId) {
-                    const changedCards = document.querySelectorAll(`.movie-card[data-movie-id="${changedMovieId}"]`)
-                    changedCards.forEach((cardElement) => {
-                        refreshCardNodeState(cardElement, changedMovieId)
-                        ensureRatedTimeInCard(cardElement, timestampSeconds)
-                    })
-                }
+            function syncLikedSection() {
+                syncRatedSection('liked-movie-stack', 8, 10, 'No liked movies yet.')
+            }
+
+            function syncDislikedSection() {
+                syncRatedSection('disliked-movie-stack', 1, 3, 'No disliked movies yet.')
             }
 
             function saveAlgorithmToLocalStorage(value) {
@@ -795,7 +824,8 @@
                         userRates.value.splice(index, 1)
                         writeCookie('user_rates', userRates.value.join(','))
                         saveRatingsToLocalStorage()
-                        syncLikedSection(movieId, timestamp)
+                        syncLikedSection()
+                        syncDislikedSection()
                         await refreshComputedSections()
                         return
                     }
@@ -818,7 +848,8 @@
 
                 writeCookie('user_rates', userRates.value.join(','))
                 saveRatingsToLocalStorage()
-                syncLikedSection(movieId, timestamp)
+                syncLikedSection()
+                syncDislikedSection()
                 await refreshComputedSections()
 
                 if (activeMovie.value && Number(activeMovie.value.movieId) === Number(movieId)) {
@@ -832,7 +863,8 @@
                     userRates.value.splice(index, 1)
                     writeCookie('user_rates', userRates.value.join(','))
                     saveRatingsToLocalStorage()
-                    syncLikedSection(movieId, Math.floor(Date.now() / 1000))
+                    syncLikedSection()
+                    syncDislikedSection()
                     refreshComputedSections()
 
                     if (activeMovie.value && Number(activeMovie.value.movieId) === Number(movieId)) {
@@ -868,10 +900,10 @@
 
 <style>
     #app {
-        max-width: min(1480px, 98vw);
+        max-width: min(1600px, 99vw);
         margin: 0 auto;
         width: 100%;
-        padding: 1.5rem;
+        padding: 1.25rem;
     }
 
     .app-hero {
@@ -1189,14 +1221,16 @@
     .app-body.ui-dark #genre-movie-stack .movie-card,
     .app-body.ui-dark #recommended-movie-stack .movie-card,
     .app-body.ui-dark #similar-movie-stack .movie-card,
-    .app-body.ui-dark #liked-movie-stack .movie-card {
+    .app-body.ui-dark #liked-movie-stack .movie-card,
+    .app-body.ui-dark #disliked-movie-stack .movie-card {
         min-height: 0;
     }
 
     .app-body.ui-dark #genre-movie-stack .movie-copy,
     .app-body.ui-dark #recommended-movie-stack .movie-copy,
     .app-body.ui-dark #similar-movie-stack .movie-copy,
-    .app-body.ui-dark #liked-movie-stack .movie-copy {
+    .app-body.ui-dark #liked-movie-stack .movie-copy,
+    .app-body.ui-dark #disliked-movie-stack .movie-copy {
         min-height: 0;
         flex: 1;
     }
@@ -1325,21 +1359,29 @@
         padding: 0 0.12rem;
     }
 
-    #liked-movie-stack .movie-card {
+    #liked-movie-stack .movie-card,
+    #disliked-movie-stack .movie-card {
         min-height: 410px;
     }
 
-    #liked-movie-stack .movie-copy {
+    #liked-movie-stack .movie-copy,
+    #disliked-movie-stack .movie-copy {
         min-height: 140px;
     }
 
     .app-body.ui-light .movie-stack,
-    .app-body.ui-light #liked-movie-stack {
-        grid-template-columns: repeat(4, 1fr);
-        grid-auto-flow: row;
-        grid-auto-columns: unset;
-        overflow-x: visible;
-        overflow-y: visible;
+    .app-body.ui-light #liked-movie-stack,
+    .app-body.ui-light #disliked-movie-stack {
+        display: grid;
+        grid-auto-flow: column;
+        grid-template-rows: repeat(2, minmax(0, auto));
+        grid-auto-columns: minmax(250px, 270px);
+        grid-template-columns: none;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        padding-bottom: 0.35rem;
+        scrollbar-gutter: stable both-edges;
+        scrollbar-width: thin;
     }
 
     .app-body.ui-light .movie-card,
@@ -1350,12 +1392,15 @@
         padding: 0.35rem;
         gap: 0.6rem;
         border-radius: 12px;
+        border: 1px solid #cfd6df;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75), 0 8px 18px rgba(15, 23, 42, 0.05);
     }
 
     .app-body.ui-light #genre-movie-stack .movie-card,
     .app-body.ui-light #recommended-movie-stack .movie-card,
     .app-body.ui-light #similar-movie-stack .movie-card,
-    .app-body.ui-light #liked-movie-stack .movie-card {
+    .app-body.ui-light #liked-movie-stack .movie-card,
+    .app-body.ui-light #disliked-movie-stack .movie-card {
         min-height: 0;
     }
 
@@ -1363,7 +1408,8 @@
     .app-body.ui-light #genre-movie-stack .movie-poster,
     .app-body.ui-light #recommended-movie-stack .movie-poster,
     .app-body.ui-light #similar-movie-stack .movie-poster,
-    .app-body.ui-light #liked-movie-stack .movie-poster {
+    .app-body.ui-light #liked-movie-stack .movie-poster,
+    .app-body.ui-light #disliked-movie-stack .movie-poster {
         width: 68px;
         min-width: 68px;
         height: 96px;
@@ -1371,7 +1417,8 @@
     }
 
     .app-body.ui-light .movie-copy,
-    .app-body.ui-light #liked-movie-stack .movie-copy {
+    .app-body.ui-light #liked-movie-stack .movie-copy,
+    .app-body.ui-light #disliked-movie-stack .movie-copy {
         padding: 0;
         min-height: 0;
         gap: 0.08rem;
@@ -1539,6 +1586,17 @@
         margin: 0 auto;
     }
 
+    .app-body.ui-light .modal-rating-block .node-bar.line-nodes {
+        margin-top: 0.2rem;
+        padding: 0 0.12rem;
+    }
+
+    .app-body.ui-light .modal-rating-block .node-bar.line-nodes .node {
+        width: 1.2rem;
+        height: 1.2rem;
+        font-size: 0.58rem;
+    }
+
     .modal-rating-block {
         text-align: center;
         width: 100%;
@@ -1552,9 +1610,9 @@
     }
 
     .modal-rating-block .node {
-        width: 1.35rem;
-        height: 1.35rem;
-        font-size: 0.54rem;
+        width: 1.95rem;
+        height: 1.95rem;
+        font-size: 0.75rem;
     }
 
     @media screen and (max-width: 768px) {
@@ -1715,22 +1773,31 @@
 
     @media screen and (min-width: 1088px) {
         .app-body.ui-light .movie-stack,
-        .app-body.ui-light #liked-movie-stack {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+        .app-body.ui-light #liked-movie-stack,
+        .app-body.ui-light #disliked-movie-stack {
+            grid-auto-columns: minmax(300px, 320px);
+            grid-template-columns: none;
+            overflow-x: scroll;
         }
     }
 
     @media screen and (min-width: 769px) and (max-width: 1087px) {
         .app-body.ui-light .movie-stack,
-        .app-body.ui-light #liked-movie-stack {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+        .app-body.ui-light #liked-movie-stack,
+        .app-body.ui-light #disliked-movie-stack {
+            grid-auto-columns: minmax(300px, 320px);
+            grid-template-columns: none;
+            overflow-x: scroll;
         }
     }
 
     @media screen and (max-width: 768px) {
         .app-body.ui-light .movie-stack,
-        .app-body.ui-light #liked-movie-stack {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        .app-body.ui-light #liked-movie-stack,
+        .app-body.ui-light #disliked-movie-stack {
+            grid-auto-columns: minmax(300px, 320px);
+            grid-template-columns: none;
+            overflow-x: scroll;
         }
 
         .app-body.ui-light .movie-poster,
@@ -1746,8 +1813,11 @@
 
     @media screen and (max-width: 420px) {
         .app-body.ui-light .movie-stack,
-        .app-body.ui-light #liked-movie-stack {
-            grid-template-columns: 1fr;
+        .app-body.ui-light #liked-movie-stack,
+        .app-body.ui-light #disliked-movie-stack {
+            grid-auto-columns: minmax(300px, 320px);
+            grid-template-columns: none;
+            overflow-x: scroll;
         }
     }
 
