@@ -107,7 +107,7 @@ def get_liked_movie_ids(user_rates):
             liked_ids.append(movie_id)
     return liked_ids
 
-
+# - Disliked
 def get_disliked_movie_ids(user_rates):
     """Disliked section source IDs (ratings between 1 and 3 inclusive)."""
     disliked_ids = []
