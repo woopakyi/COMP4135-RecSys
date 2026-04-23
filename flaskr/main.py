@@ -36,7 +36,7 @@ def index():
                     user_genre_scores[int(key)] = int(float(value))
                 except (TypeError, ValueError):
                     continue
-            user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
+            user_genres = user_genre_scores
 
             from .models import Rating
             db_ratings = Rating.query.filter_by(user_id=g.user.id).all()
@@ -51,7 +51,7 @@ def index():
             setup_complete = bool(selected_algorithm and selected_ui and setup_started)
 
             user_genre_scores = parse_genre_scores(request.cookies.get('user_genre_scores', ''))
-            user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
+            user_genres = user_genre_scores
 
             user_rates = parse_cookie_list(request.cookies.get('user_rates'))
         liked_movie_ids = get_liked_movie_ids(user_rates, selected_algorithm)
@@ -87,7 +87,7 @@ def index():
         setup_started = request.cookies.get('user_started', '') == '1'
         setup_complete = bool(selected_algorithm and selected_ui and setup_started)
         user_genre_scores = parse_genre_scores(request.cookies.get('user_genre_scores', ''))
-        user_genres = [str(key) for key, value in user_genre_scores.items() if value > 0]
+        user_genres = user_genre_scores
         user_rates = parse_cookie_list(request.cookies.get('user_rates'))
         liked_movie_ids = get_liked_movie_ids(user_rates, selected_algorithm)
         default_genres_movies = []

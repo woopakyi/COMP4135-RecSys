@@ -321,67 +321,185 @@ def _sort_movies_by_ids(movies_df, ordered_ids):
     return subset
 
 # - Movies based on your Genre Ratings
-def getMoviesByGenres(user_genres, movies_df, genres_df):
-    """Movies based on your Genre Ratings section."""
-    results = []
-    if len(user_genres) > 0:
-        genres_mask = genres_df['id'].isin([int(gid) for gid in user_genres])
-        user_genres_mask = [1 if has is True else 0 for has in genres_mask]
-        user_genres_df = pd.DataFrame(user_genres_mask, columns=['value'])
-        user_genres_df = pd.concat([user_genres_df, genres_df['name']], axis=1)
-        interested_genres = user_genres_df[user_genres_df['value'] == 1]['name'].tolist()
-        results = movies_df[movies_df['genres'].apply(lambda x: _is_genre_match(x, interested_genres))]
+# def getMoviesByGenres(user_genres, movies_df, genres_df):
+#     """Movies based on your Genre Ratings section."""
+#     results = []
+#     if len(user_genres) > 0:
+#         genres_mask = genres_df['id'].isin([int(gid) for gid in user_genres])
+#         user_genres_mask = [1 if has is True else 0 for has in genres_mask]
+#         user_genres_df = pd.DataFrame(user_genres_mask, columns=['value'])
+#         user_genres_df = pd.concat([user_genres_df, genres_df['name']], axis=1)
+#         interested_genres = user_genres_df[user_genres_df['value'] == 1]['name'].tolist()
+#         results = movies_df[movies_df['genres'].apply(lambda x: _is_genre_match(x, interested_genres))]
 
-    if len(results) > 0:
-        return results.to_dict('records')
-    return results
+#     if len(results) > 0:
+#         return results.to_dict('records')
+#     return results
+
+def _rating_weight_from_10_scale(rating):
+    """
+    Your new weighting idea:
+    5 -> 1.0, higher >1.0, lower <1.0
+    """
+    r = int(max(1, min(10, rating)))
+    mapping = {
+        1: 0.6,
+        2: 0.7,
+        3: 0.8,
+        4: 0.9,
+        5: 1.0,
+        6: 1.1,
+        7: 1.2,
+        8: 1.3,
+        9: 1.4,
+        10: 1.5,
+    }
+    return float(mapping.get(r, 1.0))
+
+
+def _build_weighted_profile_from_user_rates(user_rates_df):
+    """
+    Build user profile from rated movies (for Recommended).
+    Uses movie content vectors from _CACHE['movie_content'].
+    """
+    if user_rates_df.empty:
+        return None
+
+    rated = user_rates_df[['movieId', 'rating10']].drop_duplicates('movieId')
+
+    vectors = []
+    weights = []
+    for _, row in rated.iterrows():
+        mid = int(row['movieId'])
+        vec = _CACHE['movie_content'].get(mid)
+        if vec is None:
+            continue
+        w = _rating_weight_from_10_scale(int(row['rating10']))
+        vectors.append(vec)
+        weights.append(w)
+
+    if not vectors:
+        return None
+
+    mat = np.vstack(vectors)  # [n_rated, dim]
+    w = np.array(weights, dtype=np.float32)  # [n_rated]
+    profile = (mat.T @ w).astype(np.float32)
+
+    norm = float(np.linalg.norm(profile))
+    if norm < 1e-8:
+        return None
+    return profile / norm
+
+
+def _cosine_scores_against_candidates(profile, candidate_movie_ids):
+    """
+    cosine(profile, each candidate movie vector)
+    """
+    if profile is None or len(candidate_movie_ids) == 0:
+        return np.zeros(len(candidate_movie_ids), dtype=np.float32)
+
+    cand_vecs = []
+    for mid in candidate_movie_ids:
+        cand_vecs.append(_CACHE['movie_content'].get(int(mid), np.zeros_like(profile)))
+    cand_mat = np.vstack(cand_vecs)
+    cand_norm = np.linalg.norm(cand_mat, axis=1)
+    scores = (cand_mat @ profile) / (cand_norm + 1e-8)
+    return scores.astype(np.float32)
 
 # - Recommended
 def getRecommendationBy(user_rates, movies_df, rates_df):
     results = []
     if len(user_rates) == 0:
+        _write_algo1_section('Recommended (Top 12)', pd.DataFrame(), mode='a')
         return results, 'No recommendations.'
 
     _init_cache(movies_df, rates_df)
     if not _CACHE['ready']:
-        return results, f"No recommendations. (FM unavailable: {_CACHE.get('error', 'unknown error')})"
+        _write_algo1_section('Recommended (Top 12)', pd.DataFrame(), mode='a')
+        return results, f"No recommendations. (Model unavailable: {_CACHE.get('error', 'unknown error')})"
 
     user_rates_df = _parse_user_rates(user_rates)
     if user_rates_df.empty:
+        _write_algo1_section('Recommended (Top 12)', pd.DataFrame(), mode='a')
         return results, 'No recommendations.'
 
-    user_id = int(user_rates_df['userId'].iloc[0])
     rated_ids = set(user_rates_df['movieId'].astype(int).tolist())
     candidate_ids = [int(mid) for mid in movies_df['movieId'].astype(int).tolist() if int(mid) not in rated_ids]
     if not candidate_ids:
+        _write_algo1_section('Recommended (Top 12)', pd.DataFrame(), mode='a')
         return results, 'No recommendations.'
 
-    x = _build_features_for_movies(candidate_ids, user_id, user_rates_df)
-    fm_scores = _fm_predict(x)
+    user_profile = _build_weighted_profile_from_user_rates(user_rates_df)
+    if user_profile is None:
+        _write_algo1_section('Recommended (Top 12)', pd.DataFrame(), mode='a')
+        return results, 'No recommendations.'
 
-    boost_scores = _content_boost(candidate_ids, user_rates_df)
-    fm_norm = (fm_scores - fm_scores.mean()) / (fm_scores.std() + 1e-8)
-    final_scores = fm_norm + 0.35 * boost_scores
-
-    top_idx = np.argsort(-final_scores)[:TOP_K]
+    scores = _cosine_scores_against_candidates(user_profile, candidate_ids)
+    top_idx = np.argsort(-scores)[:TOP_K]
     top_movie_ids = [candidate_ids[i] for i in top_idx]
+    top_scores = [float(scores[i]) for i in top_idx]
+
+    # for txt logging (contains similarity)
+    score_df = pd.DataFrame({'movieId': top_movie_ids, 'similarity': top_scores})
+    score_df = score_df.merge(movies_df, on='movieId', how='left')
+    _write_algo1_section('Recommended (Top 12)', score_df, mode='a')
+
+    # for UI display
     results = _sort_movies_by_ids(movies_df, top_movie_ids)
 
     if len(results) > 0:
         return results.to_dict('records'), 'These movies are recommended based on your ratings.'
     return results, 'No recommendations.'
 
+
 # - Liked with Similar Items
 def getLikedSimilarBy(user_likes, movies_df):
-    """Liked with Similar Items section based on genre profile similarity."""
     results = []
-    if len(user_likes) > 0:
-        item_rep_matrix, item_rep_vector, feature_list = item_representation_based_movie_genres(movies_df)
-        user_profile = build_user_profile(user_likes, item_rep_vector, feature_list)
-        results = generate_recommendation_results(user_profile, item_rep_matrix, item_rep_vector, 12)
+    if len(user_likes) == 0:
+        _write_algo1_section('Liked with Similar Items (Top 12)', pd.DataFrame(), mode='a')
+        return results, "No similar movies found."
+
+    _init_cache(movies_df, pd.DataFrame({'userId': [], 'movieId': []}))
+    if not _CACHE['ready']:
+        _write_algo1_section('Liked with Similar Items (Top 12)', pd.DataFrame(), mode='a')
+        return results, "No similar movies found."
+
+    liked_ids = [int(mid) for mid in user_likes]
+    liked_vecs = [_CACHE['movie_content'].get(mid) for mid in liked_ids]
+    liked_vecs = [v for v in liked_vecs if v is not None]
+    if not liked_vecs:
+        _write_algo1_section('Liked with Similar Items (Top 12)', pd.DataFrame(), mode='a')
+        return results, "No similar movies found."
+
+    profile = np.mean(np.vstack(liked_vecs), axis=0).astype(np.float32)
+    norm = float(np.linalg.norm(profile))
+    if norm < 1e-8:
+        _write_algo1_section('Liked with Similar Items (Top 12)', pd.DataFrame(), mode='a')
+        return results, "No similar movies found."
+    profile = profile / norm
+
+    candidate_ids = [int(mid) for mid in movies_df['movieId'].astype(int).tolist() if int(mid) not in set(liked_ids)]
+    if not candidate_ids:
+        _write_algo1_section('Liked with Similar Items (Top 12)', pd.DataFrame(), mode='a')
+        return results, "No similar movies found."
+
+    scores = _cosine_scores_against_candidates(profile, candidate_ids)
+    top_idx = np.argsort(-scores)[:TOP_K]
+    top_movie_ids = [candidate_ids[i] for i in top_idx]
+    top_scores = [float(scores[i]) for i in top_idx]
+
+    # for txt logging (contains similarity)
+    score_df = pd.DataFrame({'movieId': top_movie_ids, 'similarity': top_scores})
+    score_df = score_df.merge(movies_df, on='movieId', how='left')
+    _write_algo1_section('Liked with Similar Items (Top 12)', score_df, mode='a')
+
+    # for UI display
+    results = _sort_movies_by_ids(movies_df, top_movie_ids)
+
     if len(results) > 0:
         return results.to_dict('records'), "The movies are similar to your liked movies."
     return results, "No similar movies found."
+
 
 
 def item_representation_based_movie_genres(movies_df):
@@ -445,3 +563,124 @@ def get_disliked_movie_ids(user_rates):
         if 1 <= rating <= 3:
             disliked_ids.append(movie_id)
     return disliked_ids
+
+
+def _genre_weight_from_rating(rating):
+    if rating == 10:
+        return 1.6
+    if rating == 9:
+        return 1.4
+    if rating == 8:
+        return 1.3
+    if rating == 7:
+        return 1.2
+    if rating == 6:
+        return 1.1
+    if rating == 5:
+        return 1.0
+    if rating == 4:
+        return 0.9
+    if rating == 3:
+        return 0.8
+    if rating == 2:
+        return 0.7
+    if rating == 1:
+        return 0.5
+    return 0.0
+
+
+def build_weighted_genre_profile(user_genre_scores, genres_df):
+    """
+    user_genre_scores: dict like {genre_id: rating_1_to_10}
+    returns: normalized weighted genre vector as numpy array
+    """
+    genre_ids = genres_df['id'].astype(int).tolist()
+    profile = np.zeros(len(genre_ids), dtype=np.float32)
+
+    for i, gid in enumerate(genre_ids):
+        rating = user_genre_scores.get(int(gid), 0)
+        profile[i] = _genre_weight_from_rating(rating)
+
+    norm = np.linalg.norm(profile)
+    if norm > 1e-8:
+        profile = profile / norm
+
+    return profile
+
+
+def getMoviesByGenres(user_genres, movies_df, genres_df):
+    """
+    Weighted genre-based recommendation source.
+    user_genres should be a dict {genre_id: rating} instead of only a list of ids.
+    """
+    results = []
+    if not user_genres:
+        return results
+
+    # If user_genres is still a list, fall back to old behavior
+    if isinstance(user_genres, list):
+        genres_mask = genres_df['id'].isin([int(gid) for gid in user_genres])
+        user_genres_mask = [1 if has is True else 0 for has in genres_mask]
+        user_genres_df = pd.DataFrame(user_genres_mask, columns=['value'])
+        user_genres_df = pd.concat([user_genres_df, genres_df['name']], axis=1)
+        interested_genres = user_genres_df[user_genres_df['value'] == 1]['name'].tolist()
+        results = movies_df[movies_df['genres'].apply(lambda x: _is_genre_match(x, interested_genres))]
+        return results.to_dict('records') if len(results) > 0 else results
+
+    # Weighted path
+    user_profile = build_weighted_genre_profile(user_genres, genres_df)
+
+    movie_profiles = []
+    for _, row in movies_df.iterrows():
+        movie_genres = row['genres'] if isinstance(row['genres'], list) else []
+        vec = np.array([1.0 if g in set(movie_genres) else 0.0 for g in genres_df['name'].astype(str).tolist()], dtype=np.float32)
+        movie_profiles.append(vec)
+
+    movie_profiles = np.vstack(movie_profiles)
+    scores = cosine_similarity([user_profile], movie_profiles)[0]
+    movies_scored = movies_df.copy()
+    movies_scored['similarity'] = scores
+    results = movies_scored.sort_values('similarity', ascending=False).head(TOP_K)
+
+    _write_algo1_section('Movies based on your Genre Ratings (Top 12)', results, mode='w')
+
+    return results.to_dict('records') if len(results) > 0 else results
+
+
+
+
+# ==================================================================================================
+# The following functions are for evaluating the recommendations shown in the website  
+# ==================================================================================================
+
+def _algo1_test_file_path(filename='Algo1RecTest.txt'):
+    return os.path.join(os.path.dirname(__file__), filename)
+
+def _write_section_header(f, title):
+    f.write('\n' + '=' * 90 + '\n')
+    f.write(title + '\n')
+    f.write('=' * 90 + '\n')
+
+def _write_section_rows(f, df):
+    if df is None or len(df) == 0:
+        f.write('No results.\n')
+        return
+    for rank, (_, row) in enumerate(df.iterrows(), start=1):
+        movie_id = int(row.get('movieId', 0))
+        title = str(row.get('title', ''))
+        sim = row.get('similarity', None)
+        sim_text = f"{float(sim):.6f}" if sim is not None else "N/A"
+        genres = row.get('genres', [])
+        genres_text = ', '.join(genres) if isinstance(genres, list) else str(genres)
+        f.write(f"{rank:02d}. movieId={movie_id} | similarity={sim_text} | title={title} | genres={genres_text}\n")
+
+def _write_algo1_section(title, df, mode='a', filename='Algo1RecTest.txt'):
+    try:
+        path = _algo1_test_file_path(filename)
+        with open(path, mode, encoding='utf-8') as f:
+            if mode == 'w':
+                f.write('Algo1 Recommendation Debug Output\n')
+            _write_section_header(f, title)
+            _write_section_rows(f, df)
+    except Exception:
+        pass

@@ -1,0 +1,37 @@
+Algo1 Recommendation Debug Output
+
+==========================================================================================
+Movies based on your Genre Ratings (Top 12)
+==========================================================================================
+01. movieId=115065 | similarity=1.000000 | title=Justin and the Knights of Valour | genres=Adventure, Animation
+02. movieId=142056 | similarity=0.816497 | title=Iron Man & Hulk: Heroes United | genres=Action, Adventure, Animation
+03. movieId=109846 | similarity=0.816497 | title=Mr. Peabody & Sherman | genres=Adventure, Animation, Comedy
+04. movieId=102720 | similarity=0.816497 | title=Epic | genres=Adventure, Animation, Fantasy
+05. movieId=96281 | similarity=0.816497 | title=ParaNorman | genres=Adventure, Animation, Comedy
+06. movieId=5109 | similarity=0.816497 | title=Return to Never Land | genres=Adventure, Animation, Children
+07. movieId=112460 | similarity=0.816497 | title=Planes: Fire & Rescue | genres=Adventure, Animation, Comedy
+08. movieId=103141 | similarity=0.816497 | title=Monsters University | genres=Adventure, Animation, Comedy
+09. movieId=103210 | similarity=0.816497 | title=Fullmetal Alchemist: The Sacred Star of Milos | genres=Action, Adventure, Animation
+10. movieId=104245 | similarity=0.816497 | title=Planes | genres=Adventure, Animation, Comedy
+11. movieId=117922 | similarity=0.816497 | title=Ice Age: A Mammoth Christmas | genres=Adventure, Animation, Children
+12. movieId=137859 | similarity=0.816497 | title=Dragon Ball Z Gaiden: The Plot to Destroy the Saiyans | genres=Action, Adventure, Animation
+
+==========================================================================================
+Recommended (Top 12)
+==========================================================================================
+No results.
+
+==========================================================================================
+Liked with Similar Items (Top 12)
+==========================================================================================
+No results.
+
+==========================================================================================
+Recommended (Top 12)
+==========================================================================================
+No results.
+
+==========================================================================================
+Liked with Similar Items (Top 12)
+==========================================================================================
+No results.

@@ -471,8 +471,9 @@
                 if (!setupComplete.value) {
                     return
                 }
-                const userGenres = Object.keys(genreScores.value)
-                    .filter((genreId) => Number(genreScores.value[genreId] || 0) > 0)
+                // const userGenres = Object.keys(genreScores.value)
+                //     .filter((genreId) => Number(genreScores.value[genreId] || 0) > 0)
+                const userGenres = { ...genreScores.value }
 
                 try {
                     const response = await fetch('/api/home/sections', {
@@ -641,6 +642,30 @@
                 }
             }
 
+            async function hydrateRatingsFromServer() {
+                if (!isLoggedIn.value) return
+                try {
+                    const res = await fetch('/api/ratings')
+                    if (!res.ok) return
+                    const data = await res.json()
+                    const rows = Array.isArray(data) ? data : (Array.isArray(data.ratings) ? data.ratings : [])
+
+                    // normalize to existing format: "611|movieId|rating|timestamp"
+                    userRates.value = rows.map((r) => {
+                        const movieId = Number(r.movieId || r.movie_id || (r.movie && r.movie.movieId) || 0)
+                        const rating = Number(r.rating || 0)
+                        const tsRaw = r.timestamp || r.created_at || r.updated_at || null
+                        const ts = tsRaw ? Math.floor(new Date(tsRaw).getTime() / 1000) : Math.floor(Date.now() / 1000)
+                        return `611|${movieId}|${rating}|${ts}`
+                    }).filter((x) => !x.includes('|0|'))
+
+                    writeCookie('user_rates', userRates.value.join(','))
+                    saveRatingsToLocalStorage()
+                } catch (_err) {
+                    // ignore
+                }
+            }
+
             function hydrateFromLocalStorage() {
                 try {
                     if (!readCookie('user_algorithm')) {
@@ -777,8 +802,12 @@
                 reloadPage()
             }
 
-            onMounted(() => {
+            onMounted(async () => {
                 hydrateFromLocalStorage()
+                await hydrateRatingsFromServer()
+                syncLikedSection()
+                syncDislikedSection()
+                await refreshComputedSections()
                 if (sessionStorage.getItem('scroll_to_original_movies') === '1' && setupComplete.value) {
                     sessionStorage.removeItem('scroll_to_original_movies')
                     originalMoviesSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
