@@ -189,7 +189,7 @@ def refresh_home_sections():
 
     if not isinstance(user_rates, list):
         user_rates = []
-    if not isinstance(user_genres, list):
+    if not isinstance(user_genres, (list, dict)):
         user_genres = []
     if selected_algorithm not in {'1', '2'}:
         selected_algorithm = '1'

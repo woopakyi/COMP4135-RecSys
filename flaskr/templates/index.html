@@ -467,37 +467,36 @@
                 })
             }
 
-            async function refreshComputedSections() {
-                if (!setupComplete.value) {
-                    return
-                }
-                // const userGenres = Object.keys(genreScores.value)
-                //     .filter((genreId) => Number(genreScores.value[genreId] || 0) > 0)
-                const userGenres = { ...genreScores.value }
+            let refreshToken = 0
 
-                try {
-                    const response = await fetch('/api/home/sections', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_rates: userRates.value,
-                            user_genres: userGenres,
-                            selected_algorithm: selectedAlgorithm.value
-                        })
-                    })
-                    if (!response.ok) {
-                        return
-                    }
-                    const payload = await response.json()
-                    renderMovieStack('genre-movie-stack', payload.default_genres_movies || [], 'No movies available.')
-                    renderMovieStack('recommended-movie-stack', payload.recommendations || [], 'No recommendations yet.')
-                    renderMovieStack('similar-movie-stack', payload.likes_similars || [], 'No similar items yet.')
-                    renderMovieStack('liked-movie-stack', payload.likes || [], 'No liked movies yet. Ratings 8-10 appear here.')
-                    renderMovieStack('disliked-movie-stack', payload.dislikes || [], 'No disliked movies yet. Ratings 1-3 appear here.')
-                } catch (_err) {
-                    // Ignore refresh errors and keep local state.
-                }
-            }
+        async function refreshComputedSections() {
+        if (!setupComplete.value) return
+        const token = ++refreshToken
+
+        const userGenres = { ...genreScores.value }
+
+        try {
+            const response = await fetch('/api/home/sections', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_rates: userRates.value,
+                user_genres: userGenres,
+                selected_algorithm: selectedAlgorithm.value
+            })
+            })
+            if (!response.ok || token !== refreshToken) return
+
+            const payload = await response.json()
+            if (token !== refreshToken) return
+
+            renderMovieStack('genre-movie-stack', payload.default_genres_movies || [], 'No movies available.')
+            renderMovieStack('recommended-movie-stack', payload.recommendations || [], 'No recommendations yet.')
+            renderMovieStack('similar-movie-stack', payload.likes_similars || [], 'No similar items yet.')
+            renderMovieStack('liked-movie-stack', payload.likes || [], 'No liked movies yet.')
+            renderMovieStack('disliked-movie-stack', payload.dislikes || [], 'No disliked movies yet.')
+        } catch (_) {}
+        }
 
             function syncRatedSection(stackId, minRating, maxRating, emptyText) {
                 const stackElement = document.getElementById(stackId)

@@ -3,28 +3,18 @@ Algo1 Recommendation Debug Output
 ==========================================================================================
 Movies based on your Genre Ratings (Top 12)
 ==========================================================================================
-01. movieId=115065 | similarity=1.000000 | title=Justin and the Knights of Valour | genres=Adventure, Animation
-02. movieId=142056 | similarity=0.816497 | title=Iron Man & Hulk: Heroes United | genres=Action, Adventure, Animation
-03. movieId=109846 | similarity=0.816497 | title=Mr. Peabody & Sherman | genres=Adventure, Animation, Comedy
-04. movieId=102720 | similarity=0.816497 | title=Epic | genres=Adventure, Animation, Fantasy
-05. movieId=96281 | similarity=0.816497 | title=ParaNorman | genres=Adventure, Animation, Comedy
-06. movieId=5109 | similarity=0.816497 | title=Return to Never Land | genres=Adventure, Animation, Children
-07. movieId=112460 | similarity=0.816497 | title=Planes: Fire & Rescue | genres=Adventure, Animation, Comedy
-08. movieId=103141 | similarity=0.816497 | title=Monsters University | genres=Adventure, Animation, Comedy
-09. movieId=103210 | similarity=0.816497 | title=Fullmetal Alchemist: The Sacred Star of Milos | genres=Action, Adventure, Animation
-10. movieId=104245 | similarity=0.816497 | title=Planes | genres=Adventure, Animation, Comedy
-11. movieId=117922 | similarity=0.816497 | title=Ice Age: A Mammoth Christmas | genres=Adventure, Animation, Children
-12. movieId=137859 | similarity=0.816497 | title=Dragon Ball Z Gaiden: The Plot to Destroy the Saiyans | genres=Action, Adventure, Animation
-
-==========================================================================================
-Recommended (Top 12)
-==========================================================================================
-No results.
-
-==========================================================================================
-Liked with Similar Items (Top 12)
-==========================================================================================
-No results.
+01. movieId=188797 | similarity=0.000000 | title=Tag | genres=Comedy
+02. movieId=1 | similarity=0.000000 | title=Toy Story | genres=Adventure, Animation, Children, Comedy, Fantasy
+03. movieId=2 | similarity=0.000000 | title=Jumanji | genres=Adventure, Children, Fantasy
+04. movieId=3 | similarity=0.000000 | title=Grumpier Old Men | genres=Comedy, Romance
+05. movieId=4 | similarity=0.000000 | title=Waiting to Exhale | genres=Comedy, Drama, Romance
+06. movieId=5 | similarity=0.000000 | title=Father of the Bride Part II | genres=Comedy
+07. movieId=172887 | similarity=0.000000 | title=Kid's Story | genres=Animation, Sci-Fi
+08. movieId=172909 | similarity=0.000000 | title=Cheburashka | genres=Animation
+09. movieId=173145 | similarity=0.000000 | title=War for the Planet of the Apes | genres=Action, Adventure, Drama, Sci-Fi
+10. movieId=173205 | similarity=0.000000 | title=The Meyerowitz Stories | genres=Comedy
+11. movieId=173209 | similarity=0.000000 | title=War Machine | genres=Comedy, Drama, War
+12. movieId=173253 | similarity=0.000000 | title=Vir Das: Abroad Understanding | genres=Comedy
 
 ==========================================================================================
 Recommended (Top 12)

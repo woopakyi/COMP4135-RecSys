@@ -12,6 +12,14 @@ def getMovies():
     path = f"{rootPath}/flaskr/static/ml_data/movie_info.csv"
     df = pd.read_csv(path)
     df['genres'] = df.genres.str.split('|')
+    # Sanitize NaN values so jsonify never outputs bare `NaN` (invalid JSON).
+    # The new getMoviesByGenres ranks by cosine similarity, which can surface niche
+    # movies (e.g. Cheburashka) that have missing overview/year in the CSV.
+    # Python's json.dumps serialises float nan as the literal NaN, which browsers
+    # reject in response.json(), silently breaking all dynamic section updates.
+    df['year'] = pd.array([None if pd.isna(x) else int(x) for x in df['year']], dtype=object)
+    df['overview'] = df['overview'].fillna('')
+    df['cover_url'] = df['cover_url'].fillna('')
 
     return df
 
