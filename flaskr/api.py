@@ -44,6 +44,17 @@ FEEDBACK_TYPE_CONFIG = {
 }
 
 
+def _normalize_feedback_types(feedback_types):
+    if not isinstance(feedback_types, (list, tuple, set)):
+        return []
+
+    valid_types = []
+    for item in feedback_types:
+        if isinstance(item, str) and item in FEEDBACK_TYPE_CONFIG and item not in valid_types:
+            valid_types.append(item)
+    return valid_types
+
+
 # ==================== GENRES ====================
 @api_bp.route('/genres', methods=['GET'])
 def get_genres():
@@ -243,12 +254,7 @@ def get_profile():
     if not g.user:
         return jsonify({'error': 'Not logged in'}), 401
 
-    participant_types = ['participant', 'logged']
-    submitted_types = list(dict.fromkeys([
-        row.feedback_type for row in Feedback.query.with_entities(Feedback.feedback_type).filter_by(user_id=g.user.id).filter(
-            Feedback.submission_type.in_(participant_types)
-        ).all() if isinstance(row.feedback_type, str) and row.feedback_type in FEEDBACK_TYPE_CONFIG
-    ]))
+    submitted_types = g.user.get_feedback_progress_types()
 
     return jsonify({
         'user': {
@@ -374,13 +380,7 @@ def feedback_prefill():
         if not g.user:
             return jsonify({'logged_in': False, 'defaults': {}, 'submitted_types': []})
 
-        user_rows = Feedback.query.filter_by(user_id=g.user.id).filter(
-            Feedback.submission_type.in_(['participant', 'logged'])
-        ).all()
-        submitted_types = list(dict.fromkeys([
-            row.feedback_type for row in user_rows
-            if isinstance(row.feedback_type, str) and row.feedback_type in FEEDBACK_TYPE_CONFIG
-        ]))
+        submitted_types = g.user.get_feedback_progress_types()
         default_full_name = (g.user.participant_full_name or '')
         default_contact_email = (g.user.participant_contact_email or '')
 
@@ -499,11 +499,7 @@ def feedback_progress():
     all_types = list(FEEDBACK_TYPE_CONFIG.keys())
     participant_types = ['participant', 'logged']
     if g.user:
-        submitted = {
-            row.feedback_type for row in Feedback.query.filter_by(user_id=g.user.id).filter(
-                Feedback.submission_type.in_(participant_types)
-            ).all() if isinstance(row.feedback_type, str) and row.feedback_type in FEEDBACK_TYPE_CONFIG
-        }
+        submitted = set(_normalize_feedback_types(g.user.get_feedback_progress_types()))
         progress = [{
             'feedback_type': ft,
             'completed': ft in submitted,
