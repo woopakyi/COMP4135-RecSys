@@ -114,8 +114,13 @@ const app = createApp({
             return raw.split(',').filter(Boolean);
         },
 
+        // writeGuestRateRecordsToCookie(records) {
+        //     document.cookie = `user_rates=${encodeURIComponent(records.join(','))}; path=/`;
+            
+        // },
+
         writeGuestRateRecordsToCookie(records) {
-            document.cookie = `user_rates=${encodeURIComponent(records.join(','))}; path=/`;
+            document.cookie = `user_rates=${records.join(',')}; path=/`;
         },
 
         clearCookie(name) {
@@ -336,6 +341,10 @@ const app = createApp({
 
             if (!this.isLoggedIn) {
                 GenreStorage.savePreference(genreId, score);
+                // Sync the cookie so Flask picks up the updated scores on next page load
+                const allPrefs = GenreStorage.getPreferencesForAPI();
+                const scoreRecords = Object.keys(allPrefs).map(k => `${k}:${allPrefs[k]}`);
+                document.cookie = `user_genre_scores=${scoreRecords.join(',')}; path=/`;
                 return;
             }
 

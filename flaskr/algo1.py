@@ -407,7 +407,8 @@ def _cosine_scores_against_candidates(profile, candidate_movie_ids):
     return scores.astype(np.float32)
 
 # - Recommended
-def getRecommendationBy(user_rates, movies_df, rates_df):
+# - Recommended
+def getRecommendationBy(user_rates, movies_df, rates_df, user_genres=None, genres_df=None):
     results = []
     if len(user_rates) == 0:
         _write_algo1_section('Recommended (Top 12)', pd.DataFrame(), mode='a')
@@ -429,8 +430,31 @@ def getRecommendationBy(user_rates, movies_df, rates_df):
         _write_algo1_section('Recommended (Top 12)', pd.DataFrame(), mode='a')
         return results, 'No recommendations.'
 
-    user_profile = _build_weighted_profile_from_user_rates(user_rates_df)
-    if user_profile is None:
+    # Profile from rated movies (content vectors)
+    movie_profile = _build_weighted_profile_from_user_rates(user_rates_df)
+
+    # Profile from genre sliders, padded with 0 for the year slot to match movie_content shape
+    genre_profile = None
+    if user_genres and genres_df is not None and isinstance(user_genres, dict):
+        genre_vec = build_weighted_genre_profile(user_genres, genres_df)
+        genre_profile = np.concatenate([genre_vec, np.array([0.0], dtype=np.float32)]).astype(np.float32)
+        gp_norm = float(np.linalg.norm(genre_profile))
+        if gp_norm > 1e-8:
+            genre_profile = genre_profile / gp_norm
+        else:
+            genre_profile = None
+
+    # Combine (weighted average)
+    alpha = 0.7  # weight for the movie-rating profile
+    if movie_profile is not None and genre_profile is not None:
+        combined = alpha * movie_profile + (1.0 - alpha) * genre_profile
+        c_norm = float(np.linalg.norm(combined))
+        user_profile = combined / c_norm if c_norm > 1e-8 else movie_profile
+    elif movie_profile is not None:
+        user_profile = movie_profile
+    elif genre_profile is not None:
+        user_profile = genre_profile
+    else:
         _write_algo1_section('Recommended (Top 12)', pd.DataFrame(), mode='a')
         return results, 'No recommendations.'
 

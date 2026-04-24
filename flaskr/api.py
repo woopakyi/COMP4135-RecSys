@@ -187,10 +187,10 @@ def refresh_home_sections():
     user_genres = data.get('user_genres', [])
     selected_algorithm = str(data.get('selected_algorithm') or request.cookies.get('user_algorithm', '1'))
 
-    if not isinstance(user_rates, list):
-        user_rates = []
     if not isinstance(user_genres, (list, dict)):
         user_genres = []
+    if isinstance(user_genres, dict):
+        user_genres = {int(k): v for k, v in user_genres.items()}
     if selected_algorithm not in {'1', '2'}:
         selected_algorithm = '1'
 
@@ -213,7 +213,7 @@ def refresh_home_sections():
     if len(default_genres_movies) == 0:
         default_genres_movies = movies.head(12).to_dict('records')
 
-    recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm)
+    recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm, user_genres)
     likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)
     likes_movies = getUserLikesBy([str(movie_id) for movie_id in liked_movie_ids])
     dislikes_movies = getUserDislikesBy([str(movie_id) for movie_id in disliked_movie_ids])

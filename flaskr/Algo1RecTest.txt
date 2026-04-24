@@ -3,25 +3,47 @@ Algo1 Recommendation Debug Output
 ==========================================================================================
 Movies based on your Genre Ratings (Top 12)
 ==========================================================================================
-01. movieId=188797 | similarity=0.000000 | title=Tag | genres=Comedy
-02. movieId=1 | similarity=0.000000 | title=Toy Story | genres=Adventure, Animation, Children, Comedy, Fantasy
-03. movieId=2 | similarity=0.000000 | title=Jumanji | genres=Adventure, Children, Fantasy
-04. movieId=3 | similarity=0.000000 | title=Grumpier Old Men | genres=Comedy, Romance
-05. movieId=4 | similarity=0.000000 | title=Waiting to Exhale | genres=Comedy, Drama, Romance
-06. movieId=5 | similarity=0.000000 | title=Father of the Bride Part II | genres=Comedy
-07. movieId=172887 | similarity=0.000000 | title=Kid's Story | genres=Animation, Sci-Fi
-08. movieId=172909 | similarity=0.000000 | title=Cheburashka | genres=Animation
-09. movieId=173145 | similarity=0.000000 | title=War for the Planet of the Apes | genres=Action, Adventure, Drama, Sci-Fi
-10. movieId=173205 | similarity=0.000000 | title=The Meyerowitz Stories | genres=Comedy
-11. movieId=173209 | similarity=0.000000 | title=War Machine | genres=Comedy, Drama, War
-12. movieId=173253 | similarity=0.000000 | title=Vir Das: Abroad Understanding | genres=Comedy
+01. movieId=115065 | similarity=1.000000 | title=Justin and the Knights of Valour | genres=Adventure, Animation
+02. movieId=142056 | similarity=0.816497 | title=Iron Man & Hulk: Heroes United | genres=Action, Adventure, Animation
+03. movieId=109846 | similarity=0.816497 | title=Mr. Peabody & Sherman | genres=Adventure, Animation, Comedy
+04. movieId=102720 | similarity=0.816497 | title=Epic | genres=Adventure, Animation, Fantasy
+05. movieId=96281 | similarity=0.816497 | title=ParaNorman | genres=Adventure, Animation, Comedy
+06. movieId=5109 | similarity=0.816497 | title=Return to Never Land | genres=Adventure, Animation, Children
+07. movieId=112460 | similarity=0.816497 | title=Planes: Fire & Rescue | genres=Adventure, Animation, Comedy
+08. movieId=103141 | similarity=0.816497 | title=Monsters University | genres=Adventure, Animation, Comedy
+09. movieId=103210 | similarity=0.816497 | title=Fullmetal Alchemist: The Sacred Star of Milos | genres=Action, Adventure, Animation
+10. movieId=104245 | similarity=0.816497 | title=Planes | genres=Adventure, Animation, Comedy
+11. movieId=117922 | similarity=0.816497 | title=Ice Age: A Mammoth Christmas | genres=Adventure, Animation, Children
+12. movieId=137859 | similarity=0.816497 | title=Dragon Ball Z Gaiden: The Plot to Destroy the Saiyans | genres=Action, Adventure, Animation
 
 ==========================================================================================
 Recommended (Top 12)
 ==========================================================================================
-No results.
+01. movieId=149406 | similarity=0.968341 | title=Kung Fu Panda 3 | genres=Action, Adventure, Animation
+02. movieId=146309 | similarity=0.968065 | title=The Boy and the Beast | genres=Action, Adventure, Animation
+03. movieId=131739 | similarity=0.968065 | title=Batman vs. Robin | genres=Action, Adventure, Animation
+04. movieId=112175 | similarity=0.967773 | title=How to Train Your Dragon 2 | genres=Action, Adventure, Animation
+05. movieId=103210 | similarity=0.966805 | title=Fullmetal Alchemist: The Sacred Star of Milos | genres=Action, Adventure, Animation
+06. movieId=137859 | similarity=0.957803 | title=Dragon Ball Z Gaiden: The Plot to Destroy the Saiyans | genres=Action, Adventure, Animation
+07. movieId=61160 | similarity=0.860018 | title=Star Wars: The Clone Wars | genres=Action, Adventure, Animation, Sci-Fi
+08. movieId=8917 | similarity=0.857027 | title=Team America: World Police | genres=Action, Adventure, Animation, Comedy
+09. movieId=1274 | similarity=0.842788 | title=Akira | genres=Action, Adventure, Animation, Sci-Fi
+10. movieId=177765 | similarity=0.832983 | title=Coco | genres=Adventure, Animation, Children
+11. movieId=170957 | similarity=0.832983 | title=Cars 3 | genres=Adventure, Animation, Comedy
+12. movieId=157296 | similarity=0.832429 | title=Finding Dory | genres=Adventure, Animation, Comedy
 
 ==========================================================================================
 Liked with Similar Items (Top 12)
 ==========================================================================================
-No results.
+01. movieId=177765 | similarity=0.865277 | title=Coco | genres=Adventure, Animation, Children
+02. movieId=170957 | similarity=0.865277 | title=Cars 3 | genres=Adventure, Animation, Comedy
+03. movieId=157296 | similarity=0.864701 | title=Finding Dory | genres=Adventure, Animation, Comedy
+04. movieId=149406 | similarity=0.864701 | title=Kung Fu Panda 3 | genres=Action, Adventure, Animation
+05. movieId=131739 | similarity=0.864111 | title=Batman vs. Robin | genres=Action, Adventure, Animation
+06. movieId=146309 | similarity=0.864111 | title=The Boy and the Beast | genres=Action, Adventure, Animation
+07. movieId=109846 | similarity=0.863505 | title=Mr. Peabody & Sherman | genres=Adventure, Animation, Comedy
+08. movieId=112175 | similarity=0.863505 | title=How to Train Your Dragon 2 | genres=Action, Adventure, Animation
+09. movieId=112460 | similarity=0.863505 | title=Planes: Fire & Rescue | genres=Adventure, Animation, Comedy
+10. movieId=142056 | similarity=0.862883 | title=Iron Man & Hulk: Heroes United | genres=Action, Adventure, Animation
+11. movieId=103141 | similarity=0.862883 | title=Monsters University | genres=Adventure, Animation, Comedy
+12. movieId=163809 | similarity=0.862883 | title=Over the Garden Wall | genres=Adventure, Animation, Drama
