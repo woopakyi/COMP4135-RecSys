@@ -580,6 +580,7 @@ const { createApp } = Vue;
 const feedbackRoot = document.getElementById('feedback-app');
 const FEEDBACK_PARTICIPANT_PROFILE_KEY = 'feedback_participant_profile';
 const FEEDBACK_PARTICIPANT_TYPES_KEY = 'feedback_participant_submitted_types';
+const FEEDBACK_PARTICIPANT_RECORD_IDS_KEY = 'feedback_participant_record_ids';
 
 const app = createApp({
     data() {
@@ -703,6 +704,7 @@ const app = createApp({
                 });
 
                 if (!response.ok) throw new Error('Failed to submit feedback');
+                const result = await response.json();
                 this.showStatus('Submitted successfully. Thanks for your feedback.', 'success');
                 if (this.submissionType === 'participant' && this.feedbackType && !this.submittedTypes.includes(this.feedbackType)) {
                     this.submittedTypes.push(this.feedbackType);
@@ -714,6 +716,14 @@ const app = createApp({
                             contact_email: this.contactEmail.trim()
                         }));
                         localStorage.setItem(FEEDBACK_PARTICIPANT_TYPES_KEY, JSON.stringify(this.submittedTypes));
+
+                        const existingRecordIds = JSON.parse(localStorage.getItem(FEEDBACK_PARTICIPANT_RECORD_IDS_KEY) || '[]');
+                        const recordIds = Array.isArray(existingRecordIds) ? existingRecordIds : [];
+                        const newRecordId = parseInt(result.feedback_id, 10);
+                        if (!Number.isNaN(newRecordId) && !recordIds.includes(newRecordId)) {
+                            recordIds.push(newRecordId);
+                        }
+                        localStorage.setItem(FEEDBACK_PARTICIPANT_RECORD_IDS_KEY, JSON.stringify(recordIds));
                     } catch (_err) {
                         // Ignore localStorage write errors.
                     }

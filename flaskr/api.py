@@ -243,6 +243,13 @@ def get_profile():
     if not g.user:
         return jsonify({'error': 'Not logged in'}), 401
 
+    participant_types = ['participant', 'logged']
+    submitted_types = list(dict.fromkeys([
+        row.feedback_type for row in Feedback.query.with_entities(Feedback.feedback_type).filter_by(user_id=g.user.id).filter(
+            Feedback.submission_type.in_(participant_types)
+        ).all() if isinstance(row.feedback_type, str) and row.feedback_type in FEEDBACK_TYPE_CONFIG
+    ]))
+
     return jsonify({
         'user': {
             'id': g.user.id,
@@ -252,7 +259,7 @@ def get_profile():
             'ui_preference': g.user.ui_preference,
             'preferences_saved': bool(g.user.preferences_saved),
             'genre_preferences': g.user.get_genre_preferences(),
-            'feedback_progress_types': g.user.get_feedback_progress_types(),
+            'feedback_progress_types': submitted_types,
             'participant_full_name': g.user.participant_full_name or '',
             'participant_contact_email': g.user.participant_contact_email or '',
             'admin': bool(g.user.admin),
@@ -370,20 +377,12 @@ def feedback_prefill():
         user_rows = Feedback.query.filter_by(user_id=g.user.id).filter(
             Feedback.submission_type.in_(['participant', 'logged'])
         ).all()
-        submitted_types = [row.feedback_type for row in user_rows]
-        migrated_types = [t for t in g.user.get_feedback_progress_types() if isinstance(t, str)]
-        submitted_types = list(dict.fromkeys(submitted_types + migrated_types))
-        latest_row = Feedback.query.filter_by(user_id=g.user.id).filter(
-            Feedback.submission_type.in_(['participant', 'logged'])
-        ).order_by(desc(Feedback.created_at)).first()
-        default_full_name = (
-            latest_row.full_name if latest_row and latest_row.full_name
-            else (g.user.participant_full_name or g.user.username)
-        ) or ''
-        default_contact_email = (
-            latest_row.contact_email if latest_row and latest_row.contact_email
-            else (g.user.participant_contact_email or g.user.email)
-        ) or ''
+        submitted_types = list(dict.fromkeys([
+            row.feedback_type for row in user_rows
+            if isinstance(row.feedback_type, str) and row.feedback_type in FEEDBACK_TYPE_CONFIG
+        ]))
+        default_full_name = (g.user.participant_full_name or '')
+        default_contact_email = (g.user.participant_contact_email or '')
 
         return jsonify({
             'logged_in': True,
@@ -500,13 +499,11 @@ def feedback_progress():
     all_types = list(FEEDBACK_TYPE_CONFIG.keys())
     participant_types = ['participant', 'logged']
     if g.user:
-        migrated_types = set(g.user.get_feedback_progress_types())
         submitted = {
             row.feedback_type for row in Feedback.query.filter_by(user_id=g.user.id).filter(
                 Feedback.submission_type.in_(participant_types)
-            ).all()
+            ).all() if isinstance(row.feedback_type, str) and row.feedback_type in FEEDBACK_TYPE_CONFIG
         }
-        submitted = submitted.union(migrated_types)
         progress = [{
             'feedback_type': ft,
             'completed': ft in submitted,
@@ -660,7 +657,7 @@ def migrate_ratings():
     ui_mode = data.get('uiMode')
     setup_saved = bool(data.get('setupSaved'))
     feedback_progress_types = data.get('feedbackProgressTypes', [])
-    participant_profile = data.get('participantProfile', {}) if isinstance(data.get('participantProfile'), dict) else {}
+    feedback_record_ids = data.get('feedbackRecordIds', [])
 
     def parse_client_timestamp(raw_value):
         if raw_value is None:
@@ -731,17 +728,52 @@ def migrate_ratings():
 
     g.user.preferences_saved = setup_saved
 
+    valid_types = []
     if isinstance(feedback_progress_types, list):
         valid_types = [t for t in feedback_progress_types if isinstance(t, str) and t in FEEDBACK_TYPE_CONFIG]
         if valid_types:
-            g.user.set_feedback_progress_types(valid_types)
+            merged_types = list(dict.fromkeys(g.user.get_feedback_progress_types() + valid_types))
+            g.user.set_feedback_progress_types(merged_types)
 
-    migrated_full_name = (participant_profile.get('full_name') or '').strip() if isinstance(participant_profile, dict) else ''
-    migrated_contact_email = (participant_profile.get('contact_email') or '').strip() if isinstance(participant_profile, dict) else ''
-    if migrated_full_name:
-        g.user.participant_full_name = migrated_full_name
-    if migrated_contact_email:
-        g.user.participant_contact_email = migrated_contact_email
+    # Attach guest participant feedback rows to this account.
+    # Prefer explicit IDs from localStorage; fall back to exact profile/type matching.
+    record_ids = []
+    if isinstance(feedback_record_ids, list):
+        for raw_id in feedback_record_ids:
+            try:
+                parsed = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0 and parsed not in record_ids:
+                record_ids.append(parsed)
+
+    participant_types = ['participant', 'logged']
+    guest_feedback_query = Feedback.query.filter(
+        Feedback.user_id.is_(None),
+        Feedback.submission_type.in_(participant_types)
+    )
+
+    if record_ids:
+        guest_feedback_query = guest_feedback_query.filter(Feedback.id.in_(record_ids))
+    else:
+        # No deterministic way to attach legacy guest rows without explicit IDs.
+        if not valid_types:
+            guest_feedback_query = None
+        else:
+            guest_feedback_query = None
+
+    linked_types = []
+    if guest_feedback_query is not None:
+        for row in guest_feedback_query.all():
+            row.user_id = g.user.id
+            if row.submission_type == 'logged':
+                row.submission_type = 'participant'
+            if isinstance(row.feedback_type, str) and row.feedback_type in FEEDBACK_TYPE_CONFIG:
+                linked_types.append(row.feedback_type)
+
+    if linked_types:
+        merged_types = list(dict.fromkeys(g.user.get_feedback_progress_types() + linked_types))
+        g.user.set_feedback_progress_types(merged_types)
 
     db.session.commit()
     return jsonify({'success': True, 'created': created_count, 'updated': updated_count})

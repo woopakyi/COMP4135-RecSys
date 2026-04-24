@@ -181,24 +181,24 @@
             const algorithm = localStorage.getItem('rec_algorithm');
             const uiMode = localStorage.getItem('rec_ui_mode');
             const rawFeedbackProgress = localStorage.getItem('feedback_participant_submitted_types');
-            const rawParticipantProfile = localStorage.getItem('feedback_participant_profile');
+            const rawFeedbackRecordIds = localStorage.getItem('feedback_participant_record_ids');
             const rawSetupSaved = localStorage.getItem('rec_setup_saved');
 
             const hasRatings = !!rawRatings && rawRatings !== '{}';
             const hasGenres = !!rawGenres && rawGenres !== '{}';
             const hasPrefs = !!algorithm || !!uiMode;
             const hasFeedbackProgress = !!rawFeedbackProgress && rawFeedbackProgress !== '[]';
-            const hasParticipantProfile = !!rawParticipantProfile && rawParticipantProfile !== '{}';
+            const hasFeedbackRecords = !!rawFeedbackRecordIds && rawFeedbackRecordIds !== '[]';
             const hasSetupSaved = rawSetupSaved === '1' || rawSetupSaved === 'true';
 
-            if (!hasRatings && !hasGenres && !hasPrefs && !hasFeedbackProgress && !hasParticipantProfile && !hasSetupSaved) {
+            if (!hasRatings && !hasGenres && !hasPrefs && !hasFeedbackProgress && !hasFeedbackRecords && !hasSetupSaved) {
                 return;
             }
 
             let ratingsObject = {};
             let genresObject = {};
             let feedbackProgressTypes = [];
-            let participantProfile = {};
+            let feedbackRecordIds = [];
             try {
                 ratingsObject = rawRatings ? JSON.parse(rawRatings) : {};
             } catch (_err) {
@@ -216,10 +216,10 @@
                 feedbackProgressTypes = [];
             }
             try {
-                const parsedProfile = rawParticipantProfile ? JSON.parse(rawParticipantProfile) : {};
-                participantProfile = parsedProfile && typeof parsedProfile === 'object' ? parsedProfile : {};
+                const parsedRecordIds = rawFeedbackRecordIds ? JSON.parse(rawFeedbackRecordIds) : [];
+                feedbackRecordIds = Array.isArray(parsedRecordIds) ? parsedRecordIds : [];
             } catch (_err) {
-                participantProfile = {};
+                feedbackRecordIds = [];
             }
 
             const ratings = Object.keys(ratingsObject).map((movieId) => ({
@@ -248,7 +248,7 @@
                     uiMode,
                     setupSaved,
                     feedbackProgressTypes,
-                    participantProfile
+                    feedbackRecordIds
                 }),
                 keepalive: true
             }).then((resp) => {
@@ -262,7 +262,7 @@
                 localStorage.removeItem('rec_ui_mode');
                 localStorage.removeItem('rec_selected_genres');
                 localStorage.removeItem('feedback_participant_submitted_types');
-                localStorage.removeItem('feedback_participant_profile');
+                localStorage.removeItem('feedback_participant_record_ids');
                 localStorage.removeItem('rec_setup_saved');
                 document.cookie = 'user_rates=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
                 document.cookie = 'user_genre_scores=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
