@@ -24,7 +24,12 @@ def index():
     default_genres = genres.to_dict('records')
     try:
         if g.user:
-            selected_algorithm = '1' if g.user.algorithm_preference == 'algo1' else '2'
+            if g.user.algorithm_preference == 'algo1':
+                selected_algorithm = '1'
+            elif g.user.algorithm_preference == 'algo2':
+                selected_algorithm = '2'
+            else:
+                selected_algorithm = ''
             selected_ui = g.user.ui_preference or '1'
             setup_complete = bool(g.user.preferences_saved)
             setup_started = setup_complete

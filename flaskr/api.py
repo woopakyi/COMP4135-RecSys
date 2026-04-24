@@ -306,7 +306,7 @@ def reset_preferences():
     if not g.user:
         return jsonify({'error': 'Not logged in'}), 401
 
-    g.user.algorithm_preference = 'algo1'
+    g.user.algorithm_preference = None
     g.user.ui_preference = '1'
     g.user.preferences_saved = False
     g.user.set_genre_preferences({})

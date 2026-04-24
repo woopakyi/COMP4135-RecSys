@@ -12,7 +12,7 @@ const app = createApp({
             hasGoogleLinked: profileRoot?.dataset.hasGoogleLinked === 'true',
             profile: {
                 username: initialUsername,
-                algorithm: 'algo1',
+                algorithm: '',
                 uiMode: '1'
             },
             genreScores: {},
@@ -146,7 +146,7 @@ const app = createApp({
 
         async loadUserProfile() {
             if (!this.isLoggedIn) {
-                this.profile.algorithm = SettingsStorage.getAlgorithm() || 'algo1';
+                this.profile.algorithm = SettingsStorage.getAlgorithm() || '';
                 this.profile.uiMode = SettingsStorage.getUiMode() || '1';
                 this.genreScores = GenreStorage.getPreferencesForAPI();
                 return;
@@ -158,7 +158,7 @@ const app = createApp({
                 const data = await response.json();
                 
                 this.profile.username = data.user.username || profileRoot?.dataset.initialUsername || '';
-                this.profile.algorithm = data.user.algorithm_preference || 'algo1';
+                this.profile.algorithm = data.user.algorithm_preference || '';
                 this.profile.uiMode = data.user.ui_preference || '1';
                 this.applyUiTheme(this.profile.uiMode);
                 this.persistUiMode(this.profile.uiMode, { saveLocal: false });
@@ -371,15 +371,15 @@ const app = createApp({
 
         async resetPreferences() {
             if (!this.isLoggedIn) {
-                SettingsStorage.setAlgorithm('algo1');
+                localStorage.removeItem('rec_algorithm');
                 SettingsStorage.setUiMode('1');
                 GenreStorage.clearAllPreferences();
                 localStorage.removeItem('rec_setup_saved');
                 document.cookie = 'user_started=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-                document.cookie = 'user_algorithm=1; path=/';
+                document.cookie = 'user_algorithm=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
                 document.cookie = 'user_ui=1; path=/';
                 document.cookie = 'user_genre_scores=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-                this.profile.algorithm = 'algo1';
+                this.profile.algorithm = '';
                 this.profile.uiMode = '1';
                 this.applyUiTheme('1');
                 this.applyGenreScoreDefaults();
@@ -391,10 +391,10 @@ const app = createApp({
                 const response = await fetch('/api/preferences/reset', { method: 'POST' });
                 if (!response.ok) throw new Error('Failed to reset preferences');
                 document.cookie = 'user_started=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-                document.cookie = 'user_algorithm=1; path=/';
+                document.cookie = 'user_algorithm=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
                 document.cookie = 'user_ui=1; path=/';
                 document.cookie = 'user_genre_scores=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-                this.profile.algorithm = 'algo1';
+                this.profile.algorithm = '';
                 this.profile.uiMode = '1';
                 this.applyUiTheme('1');
                 this.applyGenreScoreDefaults();
