@@ -49,6 +49,10 @@ def create_app(test_config=None):
             db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS rating_option_a INTEGER"))
             db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS rating_option_b INTEGER"))
             db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(120)"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences_saved BOOLEAN DEFAULT FALSE"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS feedback_progress_types TEXT DEFAULT '[]'"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS participant_full_name VARCHAR(120)"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS participant_contact_email VARCHAR(120)"))
             db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS full_name VARCHAR(120)"))
             db.session.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS contact_email VARCHAR(120)"))
             # Keep user table compact: voter_name/voter_email live in feedback table.

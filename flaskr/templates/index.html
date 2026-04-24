@@ -625,6 +625,14 @@
                 }
             }
 
+            function setSetupSavedInLocalStorage(saved) {
+                try {
+                    localStorage.setItem('rec_setup_saved', saved ? '1' : '0')
+                } catch (_err) {
+                    // Ignore storage errors
+                }
+            }
+
             function saveRatingsToLocalStorage() {
                 try {
                     const payload = {}
@@ -703,8 +711,14 @@
                     }
 
                     if ((storedAlgorithm === 'algo1' || storedAlgorithm === 'algo2') && (storedUi === '1' || storedUi === '2')) {
-                        writeCookie('user_started', '1')
-                        setupComplete.value = true
+                        const setupSaved = localStorage.getItem('rec_setup_saved')
+                        if (setupSaved === '1' || setupSaved === 'true') {
+                            writeCookie('user_started', '1')
+                            setupComplete.value = true
+                        } else {
+                            clearCookie('user_started')
+                            setupComplete.value = false
+                        }
                     } else {
                         clearCookie('user_started')
                         setupComplete.value = false
@@ -844,7 +858,8 @@
                     const profilePayload = {
                         algorithm_preference: selectedAlgorithm.value === '1' ? 'algo1' : 'algo2',
                         ui_preference: selectedUi.value,
-                        genre_preferences: genreScores.value
+                        genre_preferences: genreScores.value,
+                        preferences_saved: true
                     }
                     try {
                         await fetch('/api/profile', {
@@ -859,6 +874,9 @@
                 writeCookie('user_algorithm', selectedAlgorithm.value)
                 writeCookie('user_ui', selectedUi.value)
                 writeCookie('user_started', '1')
+                if (!isLoggedIn.value) {
+                    setSetupSavedInLocalStorage(true)
+                }
                 sessionStorage.setItem('scroll_to_original_movies', '1')
                 setupComplete.value = true
                 reloadPage()

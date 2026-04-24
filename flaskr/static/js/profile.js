@@ -374,6 +374,7 @@ const app = createApp({
                 SettingsStorage.setAlgorithm('algo1');
                 SettingsStorage.setUiMode('1');
                 GenreStorage.clearAllPreferences();
+                localStorage.removeItem('rec_setup_saved');
                 document.cookie = 'user_started=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
                 document.cookie = 'user_algorithm=1; path=/';
                 document.cookie = 'user_ui=1; path=/';

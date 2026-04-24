@@ -177,16 +177,49 @@
     (function () {
         try {
             const rawRatings = localStorage.getItem('rec_user_ratings');
+            const rawGenres = localStorage.getItem('rec_genre_prefs');
+            const algorithm = localStorage.getItem('rec_algorithm');
+            const uiMode = localStorage.getItem('rec_ui_mode');
+            const rawFeedbackProgress = localStorage.getItem('feedback_participant_submitted_types');
+            const rawParticipantProfile = localStorage.getItem('feedback_participant_profile');
+            const rawSetupSaved = localStorage.getItem('rec_setup_saved');
+
             const hasRatings = !!rawRatings && rawRatings !== '{}';
-            if (!hasRatings) {
+            const hasGenres = !!rawGenres && rawGenres !== '{}';
+            const hasPrefs = !!algorithm || !!uiMode;
+            const hasFeedbackProgress = !!rawFeedbackProgress && rawFeedbackProgress !== '[]';
+            const hasParticipantProfile = !!rawParticipantProfile && rawParticipantProfile !== '{}';
+            const hasSetupSaved = rawSetupSaved === '1' || rawSetupSaved === 'true';
+
+            if (!hasRatings && !hasGenres && !hasPrefs && !hasFeedbackProgress && !hasParticipantProfile && !hasSetupSaved) {
                 return;
             }
 
             let ratingsObject = {};
+            let genresObject = {};
+            let feedbackProgressTypes = [];
+            let participantProfile = {};
             try {
                 ratingsObject = rawRatings ? JSON.parse(rawRatings) : {};
             } catch (_err) {
                 ratingsObject = {};
+            }
+            try {
+                genresObject = rawGenres ? JSON.parse(rawGenres) : {};
+            } catch (_err) {
+                genresObject = {};
+            }
+            try {
+                const parsedProgress = rawFeedbackProgress ? JSON.parse(rawFeedbackProgress) : [];
+                feedbackProgressTypes = Array.isArray(parsedProgress) ? parsedProgress : [];
+            } catch (_err) {
+                feedbackProgressTypes = [];
+            }
+            try {
+                const parsedProfile = rawParticipantProfile ? JSON.parse(rawParticipantProfile) : {};
+                participantProfile = parsedProfile && typeof parsedProfile === 'object' ? parsedProfile : {};
+            } catch (_err) {
+                participantProfile = {};
             }
 
             const ratings = Object.keys(ratingsObject).map((movieId) => ({
@@ -194,24 +227,45 @@
                 rating: ratingsObject[movieId]?.rating,
                 timestamp: ratingsObject[movieId]?.timestamp
             })).filter((item) => !Number.isNaN(item.movieId) && item.rating != null);
-            if (!ratings.length) {
-                return;
-            }
+
+            const genrePreferences = {};
+            Object.keys(genresObject).forEach((genreId) => {
+                const parsed = parseInt(genreId, 10);
+                if (!Number.isNaN(parsed) && genresObject[genreId] && genresObject[genreId].score != null) {
+                    genrePreferences[String(parsed)] = genresObject[genreId].score;
+                }
+            });
+
+            const setupSaved = rawSetupSaved === '1' || rawSetupSaved === 'true';
 
             fetch('/api/migrate-ratings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ratings
+                    ratings,
+                    genrePreferences,
+                    algorithm,
+                    uiMode,
+                    setupSaved,
+                    feedbackProgressTypes,
+                    participantProfile
                 }),
                 keepalive: true
             }).then((resp) => {
                 if (!resp.ok) {
                     return;
                 }
-                // Ratings are moved to user account after successful migration.
+                // Guest local state has been moved to user account.
                 localStorage.removeItem('rec_user_ratings');
+                localStorage.removeItem('rec_genre_prefs');
+                localStorage.removeItem('rec_algorithm');
+                localStorage.removeItem('rec_ui_mode');
+                localStorage.removeItem('rec_selected_genres');
+                localStorage.removeItem('feedback_participant_submitted_types');
+                localStorage.removeItem('feedback_participant_profile');
+                localStorage.removeItem('rec_setup_saved');
                 document.cookie = 'user_rates=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+                document.cookie = 'user_genre_scores=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
             }).catch(() => {
                 // Ignore migration errors to avoid interrupting page use.
             });

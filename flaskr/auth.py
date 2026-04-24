@@ -355,7 +355,10 @@ def google_callback():
 def logout():
     """Log out the current user"""
     session.clear()
-    return redirect(url_for('main.index'))
+    response = redirect(url_for('main.index'))
+    for cookie_name in ['user_rates', 'user_genre_scores', 'user_algorithm', 'user_ui', 'user_started']:
+        response.delete_cookie(cookie_name, path='/')
+    return response
 
 
 @bp.before_app_request

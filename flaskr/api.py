@@ -250,7 +250,11 @@ def get_profile():
             'email': g.user.email,
             'algorithm_preference': g.user.algorithm_preference,
             'ui_preference': g.user.ui_preference,
+            'preferences_saved': bool(g.user.preferences_saved),
             'genre_preferences': g.user.get_genre_preferences(),
+            'feedback_progress_types': g.user.get_feedback_progress_types(),
+            'participant_full_name': g.user.participant_full_name or '',
+            'participant_contact_email': g.user.participant_contact_email or '',
             'admin': bool(g.user.admin),
             'created_at': g.user.created_at.isoformat()
         }
@@ -289,6 +293,9 @@ def update_profile():
                 continue
         g.user.set_genre_preferences(normalized)
 
+    if 'preferences_saved' in data:
+        g.user.preferences_saved = bool(data.get('preferences_saved'))
+
     db.session.commit()
     return jsonify({'success': True})
 
@@ -301,6 +308,7 @@ def reset_preferences():
 
     g.user.algorithm_preference = 'algo1'
     g.user.ui_preference = '1'
+    g.user.preferences_saved = False
     g.user.set_genre_preferences({})
     db.session.commit()
     return jsonify({'success': True})
@@ -363,11 +371,19 @@ def feedback_prefill():
             Feedback.submission_type.in_(['participant', 'logged'])
         ).all()
         submitted_types = [row.feedback_type for row in user_rows]
+        migrated_types = [t for t in g.user.get_feedback_progress_types() if isinstance(t, str)]
+        submitted_types = list(dict.fromkeys(submitted_types + migrated_types))
         latest_row = Feedback.query.filter_by(user_id=g.user.id).filter(
             Feedback.submission_type.in_(['participant', 'logged'])
         ).order_by(desc(Feedback.created_at)).first()
-        default_full_name = (latest_row.full_name if latest_row and latest_row.full_name else g.user.username) or ''
-        default_contact_email = (latest_row.contact_email if latest_row and latest_row.contact_email else g.user.email) or ''
+        default_full_name = (
+            latest_row.full_name if latest_row and latest_row.full_name
+            else (g.user.participant_full_name or g.user.username)
+        ) or ''
+        default_contact_email = (
+            latest_row.contact_email if latest_row and latest_row.contact_email
+            else (g.user.participant_contact_email or g.user.email)
+        ) or ''
 
         return jsonify({
             'logged_in': True,
@@ -457,6 +473,13 @@ def submit_feedback():
             )
 
         db.session.add(feedback)
+        if submission_type == 'participant' and g.user:
+            g.user.participant_full_name = full_name
+            g.user.participant_contact_email = contact_email
+            existing_types = g.user.get_feedback_progress_types()
+            if feedback_type not in existing_types:
+                existing_types.append(feedback_type)
+                g.user.set_feedback_progress_types(existing_types)
         db.session.commit()
         response = {'success': True, 'feedback_id': feedback.id}
         if existing_for_type:
@@ -477,11 +500,13 @@ def feedback_progress():
     all_types = list(FEEDBACK_TYPE_CONFIG.keys())
     participant_types = ['participant', 'logged']
     if g.user:
+        migrated_types = set(g.user.get_feedback_progress_types())
         submitted = {
             row.feedback_type for row in Feedback.query.filter_by(user_id=g.user.id).filter(
                 Feedback.submission_type.in_(participant_types)
             ).all()
         }
+        submitted = submitted.union(migrated_types)
         progress = [{
             'feedback_type': ft,
             'completed': ft in submitted,
@@ -622,14 +647,20 @@ def update_feedback(feedback_id):
 def migrate_ratings():
     """Migrate localStorage ratings to database (on login).
 
-    Only movie ratings are migrated. For duplicate movie ratings, keep the latest
-    record by timestamp and discard the older one.
+    Migrate local guest state to account on login.
+    Ratings keep the latest record by timestamp when duplicates exist.
     """
     if not g.user:
         return jsonify({'error': 'Not logged in'}), 401
 
     data = request.json or {}
     ratings_data = data.get('ratings', [])
+    genre_prefs = data.get('genrePreferences', {})
+    algorithm = data.get('algorithm')
+    ui_mode = data.get('uiMode')
+    setup_saved = bool(data.get('setupSaved'))
+    feedback_progress_types = data.get('feedbackProgressTypes', [])
+    participant_profile = data.get('participantProfile', {}) if isinstance(data.get('participantProfile'), dict) else {}
 
     def parse_client_timestamp(raw_value):
         if raw_value is None:
@@ -680,6 +711,37 @@ def migrate_ratings():
             existing.rating = rating_value
             existing.timestamp = incoming_timestamp
             updated_count += 1
+
+    if isinstance(genre_prefs, dict):
+        normalized = {}
+        for genre_id, score in genre_prefs.items():
+            try:
+                gid = int(genre_id)
+                normalized[str(gid)] = max(0, min(10, float(score)))
+            except (TypeError, ValueError):
+                continue
+        if normalized:
+            g.user.set_genre_preferences(normalized)
+
+    if algorithm in {'algo1', 'algo2'}:
+        g.user.algorithm_preference = algorithm
+
+    if ui_mode in {'1', '2'}:
+        g.user.ui_preference = ui_mode
+
+    g.user.preferences_saved = setup_saved
+
+    if isinstance(feedback_progress_types, list):
+        valid_types = [t for t in feedback_progress_types if isinstance(t, str) and t in FEEDBACK_TYPE_CONFIG]
+        if valid_types:
+            g.user.set_feedback_progress_types(valid_types)
+
+    migrated_full_name = (participant_profile.get('full_name') or '').strip() if isinstance(participant_profile, dict) else ''
+    migrated_contact_email = (participant_profile.get('contact_email') or '').strip() if isinstance(participant_profile, dict) else ''
+    if migrated_full_name:
+        g.user.participant_full_name = migrated_full_name
+    if migrated_contact_email:
+        g.user.participant_contact_email = migrated_contact_email
 
     db.session.commit()
     return jsonify({'success': True, 'created': created_count, 'updated': updated_count})

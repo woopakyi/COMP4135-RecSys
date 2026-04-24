@@ -26,8 +26,8 @@ def index():
         if g.user:
             selected_algorithm = '1' if g.user.algorithm_preference == 'algo1' else '2'
             selected_ui = g.user.ui_preference or '1'
-            setup_started = request.cookies.get('user_started', '') == '1'
-            setup_complete = bool(setup_started)
+            setup_complete = bool(g.user.preferences_saved)
+            setup_started = setup_complete
 
             raw_scores = g.user.get_genre_preferences()
             user_genre_scores = {}

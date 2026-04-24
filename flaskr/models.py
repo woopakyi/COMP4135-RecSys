@@ -16,7 +16,11 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     algorithm_preference = db.Column(db.String(10), default='algo1')  # algo1 or algo2
     ui_preference = db.Column(db.String(2), default='1')  # 1 (dark) or 2 (light)
+    preferences_saved = db.Column(db.Boolean, default=False)
     genre_preferences = db.Column(db.Text, default='{}')  # JSON string of {genre_id: score}
+    feedback_progress_types = db.Column(db.Text, default='[]')  # JSON array of completed participant feedback types
+    participant_full_name = db.Column(db.String(120), nullable=True)
+    participant_contact_email = db.Column(db.String(120), nullable=True)
     admin = db.Column(db.Boolean, default=False)  # Admin user flag
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -43,6 +47,26 @@ class User(db.Model):
     def set_genre_preferences(self, preferences_dict):
         """Set genre preferences from dictionary"""
         self.genre_preferences = json.dumps(preferences_dict)
+
+    def get_feedback_progress_types(self):
+        """Get feedback progress types as list."""
+        try:
+            raw = json.loads(self.feedback_progress_types) if self.feedback_progress_types else []
+            if isinstance(raw, list):
+                return raw
+            return []
+        except Exception:
+            return []
+
+    def set_feedback_progress_types(self, feedback_types):
+        """Set feedback progress types from iterable."""
+        if not isinstance(feedback_types, (list, tuple, set)):
+            feedback_types = []
+        normalized = []
+        for item in feedback_types:
+            if isinstance(item, str) and item not in normalized:
+                normalized.append(item)
+        self.feedback_progress_types = json.dumps(normalized)
 
 
 class Movie(db.Model):
