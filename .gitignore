@@ -1,2 +1,7 @@
 Demo_materials/
 Algo1RecTest.txt
+
+# Python bytecode/cache
+__pycache__/
+*.py[cod]
+*$py.class
