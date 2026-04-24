@@ -34,3 +34,8 @@
   cursor: pointer;
   pointer-events: auto;
 }
+
+.app-body.ui-dark .auth-card .input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}

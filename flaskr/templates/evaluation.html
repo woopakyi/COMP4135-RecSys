@@ -101,7 +101,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in votes" :key="row.id">
+                        <tr v-for="row in paginatedVotes" :key="row.id">
                             <td>[[ row.id ]]</td>
                             <td>[[ row.full_name || 'NULL' ]]</td>
                             <td>[[ row.contact_email || 'NULL' ]]</td>
@@ -119,6 +119,24 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="pagination" v-if="totalVotesPages > 1">
+                <button
+                    @click="currentVotesPage = Math.max(1, currentVotesPage - 1)"
+                    :disabled="currentVotesPage === 1"
+                    class="pagination-btn"
+                >
+                    Previous
+                </button>
+                <span class="pagination-info">Page [[ currentVotesPage ]] of [[ totalVotesPages ]]</span>
+                <button
+                    @click="currentVotesPage = Math.min(totalVotesPages, currentVotesPage + 1)"
+                    :disabled="currentVotesPage === totalVotesPages"
+                    class="pagination-btn"
+                >
+                    Next
+                </button>
             </div>
         </div>
 
@@ -300,6 +318,40 @@
         overflow-x: auto;
     }
 
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .pagination-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        color: var(--chip-text);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        border-color: var(--chip-active-bg);
+        transform: translateY(-1px);
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pagination-info {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
     .eval-table {
         border-collapse: separate;
         border-spacing: 0;
@@ -388,10 +440,20 @@ const evalApp = createApp({
             tableType: 'all',
             summary: {},
             votes: [],
+            currentVotesPage: 1,
+            votesPerPage: 10,
             isAdmin: !!document.querySelector('meta[name="eval-admin"]')
         };
     },
     computed: {
+        paginatedVotes() {
+            const start = (this.currentVotesPage - 1) * this.votesPerPage;
+            const end = start + this.votesPerPage;
+            return this.votes.slice(start, end);
+        },
+        totalVotesPages() {
+            return Math.max(1, Math.ceil(this.votes.length / this.votesPerPage));
+        },
         cards() {
             const defs = [
                 {
@@ -465,6 +527,7 @@ const evalApp = createApp({
             }
             const data = await res.json();
             this.votes = data.votes || [];
+            this.currentVotesPage = 1;
         },
         setSourceFilter(value) {
             this.sourceFilter = value;

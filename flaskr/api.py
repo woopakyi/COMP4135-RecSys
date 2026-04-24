@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, request, g
 from .models import db, User, Movie, Rating, Feedback
 from sqlalchemy import desc
 import json
+from datetime import datetime, timezone
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -619,48 +620,66 @@ def update_feedback(feedback_id):
 # ==================== MIGRATION ====================
 @api_bp.route('/migrate-ratings', methods=['POST'])
 def migrate_ratings():
-    """Migrate localStorage ratings to database (on login)"""
+    """Migrate localStorage ratings to database (on login).
+
+    Only movie ratings are migrated. For duplicate movie ratings, keep the latest
+    record by timestamp and discard the older one.
+    """
     if not g.user:
         return jsonify({'error': 'Not logged in'}), 401
 
-    data = request.json
+    data = request.json or {}
     ratings_data = data.get('ratings', [])
-    genre_prefs = data.get('genrePreferences', {})
-    algorithm = data.get('algorithm')
-    ui_mode = data.get('uiMode')
 
-    # Import ratings
+    def parse_client_timestamp(raw_value):
+        if raw_value is None:
+            return None
+        if isinstance(raw_value, (int, float)):
+            return datetime.fromtimestamp(float(raw_value), tz=timezone.utc).replace(tzinfo=None)
+        if isinstance(raw_value, str):
+            text = raw_value.strip()
+            if not text:
+                return None
+            if text.isdigit():
+                return datetime.fromtimestamp(float(text), tz=timezone.utc).replace(tzinfo=None)
+            try:
+                return datetime.fromisoformat(text.replace('Z', '+00:00')).replace(tzinfo=None)
+            except ValueError:
+                return None
+        return None
+
+    created_count = 0
+    updated_count = 0
+
     for rating in ratings_data:
-        movie_id = rating.get('movieId')
-        rating_value = rating.get('rating')
+        try:
+            movie_id = int(rating.get('movieId'))
+            rating_value = int(rating.get('rating'))
+        except (TypeError, ValueError):
+            continue
 
-        if movie_id and rating_value:
-            existing = Rating.query.filter_by(
+        if not (1 <= rating_value <= 10):
+            continue
+
+        incoming_timestamp = parse_client_timestamp(rating.get('timestamp'))
+        existing = Rating.query.filter_by(user_id=g.user.id, movie_id=movie_id).first()
+
+        if not existing:
+            new_rating = Rating(
                 user_id=g.user.id,
-                movie_id=movie_id
-            ).first()
+                movie_id=movie_id,
+                rating=rating_value,
+                timestamp=incoming_timestamp or datetime.utcnow()
+            )
+            db.session.add(new_rating)
+            created_count += 1
+            continue
 
-            if not existing:
-                new_rating = Rating(
-                    user_id=g.user.id,
-                    movie_id=movie_id,
-                    rating=rating_value
-                )
-                db.session.add(new_rating)
-
-    # Import genre preferences
-    if genre_prefs:
-        existing_prefs = g.user.get_genre_preferences()
-        for genre_id, score in genre_prefs.items():
-            if str(genre_id) not in existing_prefs:
-                existing_prefs[str(genre_id)] = score
-        g.user.set_genre_preferences(existing_prefs)
-
-    if algorithm in {'algo1', 'algo2'}:
-        g.user.algorithm_preference = algorithm
-
-    if ui_mode in {'1', '2'}:
-        g.user.ui_preference = ui_mode
+        # Keep latest record when local and account contain same movie rating.
+        if incoming_timestamp and (not existing.timestamp or incoming_timestamp > existing.timestamp):
+            existing.rating = rating_value
+            existing.timestamp = incoming_timestamp
+            updated_count += 1
 
     db.session.commit()
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'created': created_count, 'updated': updated_count})

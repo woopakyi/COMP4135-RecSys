@@ -176,36 +176,17 @@
 <script>
     (function () {
         try {
-            const userId = '{{ g.user.id }}';
-            const markerKey = 'rec_migrated_user_' + userId;
-            if (localStorage.getItem(markerKey) === '1') {
-                return;
-            }
-
             const rawRatings = localStorage.getItem('rec_user_ratings');
-            const rawGenres = localStorage.getItem('rec_genre_prefs');
-            const algorithm = localStorage.getItem('rec_algorithm');
-            const uiMode = localStorage.getItem('rec_ui_mode');
-
             const hasRatings = !!rawRatings && rawRatings !== '{}';
-            const hasGenres = !!rawGenres && rawGenres !== '{}';
-            const hasPrefs = !!algorithm || !!uiMode;
-            if (!hasRatings && !hasGenres && !hasPrefs) {
-                localStorage.setItem(markerKey, '1');
+            if (!hasRatings) {
                 return;
             }
 
             let ratingsObject = {};
-            let genresObject = {};
             try {
                 ratingsObject = rawRatings ? JSON.parse(rawRatings) : {};
             } catch (_err) {
                 ratingsObject = {};
-            }
-            try {
-                genresObject = rawGenres ? JSON.parse(rawGenres) : {};
-            } catch (_err) {
-                genresObject = {};
             }
 
             const ratings = Object.keys(ratingsObject).map((movieId) => ({
@@ -213,35 +194,24 @@
                 rating: ratingsObject[movieId]?.rating,
                 timestamp: ratingsObject[movieId]?.timestamp
             })).filter((item) => !Number.isNaN(item.movieId) && item.rating != null);
-
-            const genrePreferences = {};
-            Object.keys(genresObject).forEach((genreId) => {
-                const parsed = parseInt(genreId, 10);
-                if (!Number.isNaN(parsed) && genresObject[genreId] && genresObject[genreId].score != null) {
-                    genrePreferences[String(parsed)] = genresObject[genreId].score;
-                }
-            });
+            if (!ratings.length) {
+                return;
+            }
 
             fetch('/api/migrate-ratings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ratings,
-                    genrePreferences,
-                    algorithm,
-                    uiMode
+                    ratings
                 }),
                 keepalive: true
             }).then((resp) => {
                 if (!resp.ok) {
                     return;
                 }
+                // Ratings are moved to user account after successful migration.
                 localStorage.removeItem('rec_user_ratings');
-                localStorage.removeItem('rec_genre_prefs');
-                localStorage.removeItem('rec_algorithm');
-                localStorage.removeItem('rec_ui_mode');
-                localStorage.removeItem('rec_selected_genres');
-                localStorage.setItem(markerKey, '1');
+                document.cookie = 'user_rates=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
             }).catch(() => {
                 // Ignore migration errors to avoid interrupting page use.
             });

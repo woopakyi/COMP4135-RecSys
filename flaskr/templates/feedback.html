@@ -38,7 +38,7 @@
 
                 <div class="form-question" v-if="submissionType === 'participant'">
                     <label class="question-title">Your details *</label>
-                    <p class="question-desc">Please provide the name and contact email for this participant submission.</p>
+                    <p class="question-desc">Please provide the name and contact email for this participant submission. School email is preferred if available.</p>
 
                     <div class="form-group">
                         <label for="feedback-full-name">Full Name</label>
@@ -49,7 +49,7 @@
                             class="input"
                             maxlength="120"
                             autocomplete="name"
-                            placeholder="Enter your full name"
+                            placeholder="e.g. CHAN Tai Man"
                         >
                     </div>
 
@@ -62,7 +62,7 @@
                             class="input"
                             maxlength="120"
                             autocomplete="email"
-                            placeholder="Enter your contact email"
+                            placeholder="e.g. xxxxxxxx@life.hkbu.edu.hk"
                         >
                     </div>
 
@@ -377,6 +377,12 @@
         color: var(--text-primary);
         font-size: 1rem;
         box-sizing: border-box;
+    }
+
+    .app-body.ui-dark .feedback-form input::placeholder,
+    .app-body.ui-dark .feedback-form textarea::placeholder {
+        color: #64748b;
+        opacity: 1;
     }
 
     .feedback-textarea {
@@ -698,7 +704,7 @@ const app = createApp({
 
                 if (!response.ok) throw new Error('Failed to submit feedback');
                 this.showStatus('Submitted successfully. Thanks for your feedback.', 'success');
-                if (this.feedbackType && !this.submittedTypes.includes(this.feedbackType)) {
+                if (this.submissionType === 'participant' && this.feedbackType && !this.submittedTypes.includes(this.feedbackType)) {
                     this.submittedTypes.push(this.feedbackType);
                 }
                 if (this.submissionType === 'participant' && !this.isLoggedIn) {

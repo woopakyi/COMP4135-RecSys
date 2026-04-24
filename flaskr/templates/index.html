@@ -312,6 +312,10 @@
                 document.cookie = name + '=' + value + '; path=/'
             }
 
+            function clearCookie(name) {
+                document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+            }
+
             function readCookie(name) {
                 const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
                 return match ? decodeURIComponent(match[2]) : ''
@@ -455,14 +459,18 @@
                     return
                 }
                 stackElement.innerHTML = ''
-                if (!Array.isArray(moviesList) || moviesList.length === 0) {
+                const isUi2 = selectedUi.value === '2'
+                const visibleMovies = Array.isArray(moviesList)
+                    ? (isUi2 ? moviesList.slice(0, 12) : moviesList)
+                    : []
+                if (visibleMovies.length === 0) {
                     const messageElement = document.createElement('p')
                     messageElement.className = 'has-text-grey p-4'
                     messageElement.textContent = emptyText
                     stackElement.appendChild(messageElement)
                     return
                 }
-                moviesList.forEach((movie) => {
+                visibleMovies.forEach((movie) => {
                     stackElement.appendChild(createMovieCardElement(movie))
                 })
             }
@@ -518,15 +526,16 @@
                 })
 
                 const uniqueIds = Array.from(new Set(matchingIds))
+                const visibleIds = selectedUi.value === '2' ? uniqueIds.slice(0, 12) : uniqueIds
 
                 Array.from(stackElement.querySelectorAll('.movie-card[data-movie-id]')).forEach((cardElement) => {
                     const movieId = Number(cardElement.dataset.movieId)
-                    if (!uniqueIds.includes(movieId)) {
+                    if (!visibleIds.includes(movieId)) {
                         cardElement.remove()
                     }
                 })
 
-                uniqueIds.forEach((movieId) => {
+                visibleIds.forEach((movieId) => {
                     let movieCard = stackElement.querySelector(`.movie-card[data-movie-id="${movieId}"]`)
                     if (!movieCard) {
                         const sourceCard = Array.from(document.querySelectorAll('.movie-card[data-movie-id]'))
@@ -566,10 +575,10 @@
                 })
 
                 const emptyMessage = stackElement.querySelector('.has-text-grey.p-4')
-                if (uniqueIds.length > 0 && emptyMessage) {
+                if (visibleIds.length > 0 && emptyMessage) {
                     emptyMessage.remove()
                 }
-                if (uniqueIds.length === 0 && !stackElement.querySelector('.has-text-grey.p-4')) {
+                if (visibleIds.length === 0 && !stackElement.querySelector('.has-text-grey.p-4')) {
                     const messageElement = document.createElement('p')
                     messageElement.className = 'has-text-grey p-4'
                     messageElement.textContent = emptyText
@@ -659,36 +668,50 @@
                     }).filter((x) => !x.includes('|0|'))
 
                     writeCookie('user_rates', userRates.value.join(','))
-                    saveRatingsToLocalStorage()
+                    try {
+                        localStorage.removeItem('rec_user_ratings')
+                    } catch (_err) {
+                        // Ignore storage errors
+                    }
                 } catch (_err) {
                     // ignore
                 }
             }
 
             function hydrateFromLocalStorage() {
+                if (isLoggedIn.value) {
+                    return
+                }
                 try {
-                    if (!readCookie('user_algorithm')) {
-                        const storedAlgorithm = localStorage.getItem('rec_algorithm')
-                        if (storedAlgorithm === 'algo1') {
-                            selectedAlgorithm.value = '1'
-                            writeCookie('user_algorithm', '1')
-                        }
-                        if (storedAlgorithm === 'algo2') {
-                            selectedAlgorithm.value = '2'
-                            writeCookie('user_algorithm', '2')
-                        }
+                    const storedAlgorithm = localStorage.getItem('rec_algorithm')
+                    if (storedAlgorithm === 'algo1') {
+                        selectedAlgorithm.value = '1'
+                        writeCookie('user_algorithm', '1')
+                    } else if (storedAlgorithm === 'algo2') {
+                        selectedAlgorithm.value = '2'
+                        writeCookie('user_algorithm', '2')
+                    } else {
+                        clearCookie('user_algorithm')
                     }
 
-                    if (!readCookie('user_ui')) {
-                        const storedUi = localStorage.getItem('rec_ui_mode')
-                        if (storedUi === '1' || storedUi === '2') {
-                            selectedUi.value = storedUi
-                            writeCookie('user_ui', storedUi)
-                        }
+                    const storedUi = localStorage.getItem('rec_ui_mode')
+                    if (storedUi === '1' || storedUi === '2') {
+                        selectedUi.value = storedUi
+                        writeCookie('user_ui', storedUi)
+                    } else {
+                        clearCookie('user_ui')
+                    }
+
+                    if ((storedAlgorithm === 'algo1' || storedAlgorithm === 'algo2') && (storedUi === '1' || storedUi === '2')) {
+                        writeCookie('user_started', '1')
+                        setupComplete.value = true
+                    } else {
+                        clearCookie('user_started')
+                        setupComplete.value = false
                     }
 
                     const rawGenres = localStorage.getItem('rec_genre_prefs')
-                    if (rawGenres && !readCookie('user_genre_scores')) {
+                    if (rawGenres) {
                         const parsed = JSON.parse(rawGenres)
                         const scoreRecords = []
                         Object.keys(parsed).forEach((key) => {
@@ -700,7 +723,41 @@
                         })
                         if (scoreRecords.length) {
                             writeCookie('user_genre_scores', scoreRecords.join(','))
+                        } else {
+                            clearCookie('user_genre_scores')
                         }
+                    } else {
+                        clearCookie('user_genre_scores')
+                    }
+
+                    const rawRatings = localStorage.getItem('rec_user_ratings')
+                    if (rawRatings) {
+                        const parsedRatings = JSON.parse(rawRatings)
+                        const rebuiltRates = []
+                        Object.keys(parsedRatings).forEach((movieId) => {
+                            const movieData = parsedRatings[movieId] || {}
+                            const rating = Number(movieData.rating || 0)
+                            if (!Number.isInteger(rating) || rating < 1 || rating > 10) {
+                                return
+                            }
+                            const timestampIso = movieData.timestamp || ''
+                            const timestampSeconds = timestampIso
+                                ? Math.floor(new Date(timestampIso).getTime() / 1000)
+                                : Math.floor(Date.now() / 1000)
+                            if (!Number.isFinite(timestampSeconds)) {
+                                return
+                            }
+                            rebuiltRates.push(`611|${Number(movieId)}|${rating}|${timestampSeconds}`)
+                        })
+                        userRates.value = rebuiltRates
+                        if (rebuiltRates.length) {
+                            writeCookie('user_rates', rebuiltRates.join(','))
+                        } else {
+                            clearCookie('user_rates')
+                        }
+                    } else {
+                        userRates.value = []
+                        clearCookie('user_rates')
                     }
                 } catch (_err) {
                     // Ignore storage errors
@@ -716,7 +773,9 @@
                     scoreRecords.push(key + ':' + bounded)
                 })
                 writeCookie('user_genre_scores', scoreRecords.join(','))
-                saveGenresToLocalStorage()
+                if (!isLoggedIn.value) {
+                    saveGenresToLocalStorage()
+                }
                 if (isLoggedIn.value) {
                     fetch('/api/profile', {
                         method: 'PUT',
@@ -731,7 +790,9 @@
             function selectAlgorithm(value) {
                 selectedAlgorithm.value = value
                 writeCookie('user_algorithm', value)
-                saveAlgorithmToLocalStorage(value)
+                if (!isLoggedIn.value) {
+                    saveAlgorithmToLocalStorage(value)
+                }
                 if (isLoggedIn.value) {
                     fetch('/api/profile', {
                         method: 'PUT',
@@ -758,7 +819,9 @@
                 selectedUi.value = uiValue
                 applyUiTheme(uiValue)
                 writeCookie('user_ui', uiValue)
-                saveUiToLocalStorage(uiValue)
+                if (!isLoggedIn.value) {
+                    saveUiToLocalStorage(uiValue)
+                }
                 if (isLoggedIn.value) {
                     fetch('/api/profile', {
                         method: 'PUT',
@@ -875,7 +938,15 @@
                 }
 
                 writeCookie('user_rates', userRates.value.join(','))
-                saveRatingsToLocalStorage()
+                if (!isLoggedIn.value) {
+                    saveRatingsToLocalStorage()
+                } else {
+                    try {
+                        localStorage.removeItem('rec_user_ratings')
+                    } catch (_err) {
+                        // Ignore storage errors
+                    }
+                }
                 syncLikedSection()
                 syncDislikedSection()
                 await refreshComputedSections()
@@ -890,7 +961,15 @@
                 if (index >= 0) {
                     userRates.value.splice(index, 1)
                     writeCookie('user_rates', userRates.value.join(','))
-                    saveRatingsToLocalStorage()
+                    if (!isLoggedIn.value) {
+                        saveRatingsToLocalStorage()
+                    } else {
+                        try {
+                            localStorage.removeItem('rec_user_ratings')
+                        } catch (_err) {
+                            // Ignore storage errors
+                        }
+                    }
                     syncLikedSection()
                     syncDislikedSection()
                     refreshComputedSections()
@@ -1402,7 +1481,7 @@
     .app-body.ui-light #disliked-movie-stack {
         display: grid;
         grid-auto-flow: column;
-        grid-template-rows: repeat(2, minmax(0, auto));
+        grid-template-rows: repeat(3, minmax(0, auto));
         grid-auto-columns: minmax(250px, 270px);
         grid-template-columns: none;
         overflow-x: scroll;

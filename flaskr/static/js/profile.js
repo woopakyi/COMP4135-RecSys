@@ -71,9 +71,12 @@ const app = createApp({
             }
         },
 
-        persistUiMode(uiValue) {
+        persistUiMode(uiValue, options = {}) {
+            const saveLocal = options.saveLocal !== false;
             document.cookie = `user_ui=${uiValue}; path=/`;
-            SettingsStorage.setUiMode(uiValue);
+            if (saveLocal) {
+                SettingsStorage.setUiMode(uiValue);
+            }
         },
 
         getCookieValue(name) {
@@ -158,7 +161,7 @@ const app = createApp({
                 this.profile.algorithm = data.user.algorithm_preference || 'algo1';
                 this.profile.uiMode = data.user.ui_preference || '1';
                 this.applyUiTheme(this.profile.uiMode);
-                this.persistUiMode(this.profile.uiMode);
+                this.persistUiMode(this.profile.uiMode, { saveLocal: false });
                 this.applyGenreScoreDefaults(data.user.genre_preferences || {});
             } catch (error) {
                 console.error('Error loading profile:', error);
@@ -305,7 +308,7 @@ const app = createApp({
             } else if (type === 'ui') {
                 this.profile.uiMode = value;
                 this.applyUiTheme(value);
-                this.persistUiMode(value);
+                this.persistUiMode(value, { saveLocal: !this.isLoggedIn });
             }
 
             if (!this.isLoggedIn) {
