@@ -96,14 +96,14 @@ def create_app(test_config=None):
             User.query.first()  # Test query to check if columns exist
         except Exception as e:
             if 'UndefinedColumn' in str(type(e).__name__) or 'column' in str(e).lower():
-                print("⚠ Database schema out of sync, recreating...")
+                print("[WARNING] Database schema out of sync, recreating...")
                 try:
                     db.drop_all()
                     db.create_all()
                     seed_movies_from_csv(app)
-                    print("✅ Database schema recovered")
+                    print("[OK] Database schema recovered")
                 except Exception as recovery_error:
-                    print(f"❌ Recovery failed: {recovery_error}")
+                    print(f"[ERROR] Recovery failed: {recovery_error}")
                     raise
             else:
                 raise
