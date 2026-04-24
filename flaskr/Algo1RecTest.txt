@@ -19,31 +19,9 @@ Movies based on your Genre Ratings (Top 12)
 ==========================================================================================
 Recommended (Top 12)
 ==========================================================================================
-01. movieId=177765 | similarity=0.865277 | title=Coco | genres=Adventure, Animation, Children
-02. movieId=170957 | similarity=0.865277 | title=Cars 3 | genres=Adventure, Animation, Comedy
-03. movieId=157296 | similarity=0.864701 | title=Finding Dory | genres=Adventure, Animation, Comedy
-04. movieId=149406 | similarity=0.864701 | title=Kung Fu Panda 3 | genres=Action, Adventure, Animation
-05. movieId=131739 | similarity=0.864111 | title=Batman vs. Robin | genres=Action, Adventure, Animation
-06. movieId=146309 | similarity=0.864111 | title=The Boy and the Beast | genres=Action, Adventure, Animation
-07. movieId=109846 | similarity=0.863505 | title=Mr. Peabody & Sherman | genres=Adventure, Animation, Comedy
-08. movieId=112175 | similarity=0.863505 | title=How to Train Your Dragon 2 | genres=Action, Adventure, Animation
-09. movieId=112460 | similarity=0.863505 | title=Planes: Fire & Rescue | genres=Adventure, Animation, Comedy
-10. movieId=142056 | similarity=0.862883 | title=Iron Man & Hulk: Heroes United | genres=Action, Adventure, Animation
-11. movieId=103141 | similarity=0.862883 | title=Monsters University | genres=Adventure, Animation, Comedy
-12. movieId=163809 | similarity=0.862883 | title=Over the Garden Wall | genres=Adventure, Animation, Drama
+No results.
 
 ==========================================================================================
 Liked with Similar Items (Top 12)
 ==========================================================================================
-01. movieId=177765 | similarity=0.865277 | title=Coco | genres=Adventure, Animation, Children
-02. movieId=170957 | similarity=0.865277 | title=Cars 3 | genres=Adventure, Animation, Comedy
-03. movieId=157296 | similarity=0.864701 | title=Finding Dory | genres=Adventure, Animation, Comedy
-04. movieId=149406 | similarity=0.864701 | title=Kung Fu Panda 3 | genres=Action, Adventure, Animation
-05. movieId=131739 | similarity=0.864111 | title=Batman vs. Robin | genres=Action, Adventure, Animation
-06. movieId=146309 | similarity=0.864111 | title=The Boy and the Beast | genres=Action, Adventure, Animation
-07. movieId=109846 | similarity=0.863505 | title=Mr. Peabody & Sherman | genres=Adventure, Animation, Comedy
-08. movieId=112175 | similarity=0.863505 | title=How to Train Your Dragon 2 | genres=Action, Adventure, Animation
-09. movieId=112460 | similarity=0.863505 | title=Planes: Fire & Rescue | genres=Adventure, Animation, Comedy
-10. movieId=142056 | similarity=0.862883 | title=Iron Man & Hulk: Heroes United | genres=Action, Adventure, Animation
-11. movieId=103141 | similarity=0.862883 | title=Monsters University | genres=Adventure, Animation, Comedy
-12. movieId=163809 | similarity=0.862883 | title=Over the Garden Wall | genres=Adventure, Animation, Drama
+No results.
