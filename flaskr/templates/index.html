@@ -1593,6 +1593,14 @@
         scrollbar-width: thin;
     }
 
+    .app-body.ui-light #genre-movie-stack,
+    .app-body.ui-light #recommended-movie-stack,
+    .app-body.ui-light #similar-movie-stack,
+    .app-body.ui-light #liked-movie-stack,
+    .app-body.ui-light #disliked-movie-stack {
+        grid-template-rows: repeat(2, minmax(0, auto));
+    }
+
     .app-body.ui-light .movie-card,
     .app-body.ui-light #liked-movie-stack .movie-card {
         flex-direction: row;
