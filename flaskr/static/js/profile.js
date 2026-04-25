@@ -335,6 +335,14 @@ const app = createApp({
             }
         },
 
+        setGenreToggle(genreId, value) {
+            // Toggle off if already active, otherwise set the new value
+            const current = this.genreScores[genreId] || 0;
+            const newScore = current === value ? 0 : value;
+            this.genreScores = { ...this.genreScores, [genreId]: newScore };
+            this.updateGenreScore(genreId, newScore);
+        },
+
         async updateGenreScore(genreId, score) {
             // If score is not provided (called from older code), use the current score
             if (score === undefined) {

@@ -222,8 +222,6 @@ def refresh_home_sections():
     disliked_movie_ids = get_disliked_movie_ids(user_rates, selected_algorithm)
 
     default_genres_movies = getMoviesByGenres(user_genres, selected_algorithm)[:12]
-    if len(default_genres_movies) == 0:
-        default_genres_movies = movies.head(12).to_dict('records')
 
     recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm, user_genres)
     likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)

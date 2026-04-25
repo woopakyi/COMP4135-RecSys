@@ -117,26 +117,47 @@
             </div>
 
             <!-- Genre Preferences -->
-            <div class="pref-item">
-                <label class="pref-label">Genre ratings:</label>
+            <div class="pref-item pref-item--genre">
+                <label class="pref-label" v-if="profile.algorithm !== 'algo2'">Genre ratings:</label>
+                <label class="pref-label" v-else>Genre preferences:</label>
                 <div class="genre-preferences-list">
-                    <div v-for="genre in genres" :key="genre.id" class="genre-pref-row">
-                        <label class="genre-pref-name">[[genre.name]]</label>
-                        <div class="genre-pref-slider">
-                            <span class="slider-label">0</span>
-                            <input 
-                                type="range" 
-                                min="0" 
-                                max="10" 
-                                v-model.number="genreScores[genre.id]"
-                                @change="updateGenreScore(genre.id, genreScores[genre.id])"
-                                class="line-slider"
-                            />
-                            <span class="slider-label">10</span>
-                            <span class="slider-value">[[ genreScores[genre.id] || 0 ]]</span>
+                    <!-- Algo 1 / default: sliders -->
+                    <template v-if="profile.algorithm !== 'algo2'">
+                        <div v-for="genre in genres" :key="genre.id" class="genre-pref-row">
+                            <label class="genre-pref-name">[[genre.name]]</label>
+                            <div class="genre-pref-slider">
+                                <span class="slider-label">0</span>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="10"
+                                    v-model.number="genreScores[genre.id]"
+                                    @change="updateGenreScore(genre.id, genreScores[genre.id])"
+                                    class="line-slider"
+                                />
+                                <span class="slider-label">10</span>
+                                <span class="slider-value">[[ genreScores[genre.id] || 0 ]]</span>
+                            </div>
                         </div>
-                    </div>
+                    </template>
+                    <!-- Algo 2: like / dislike toggles -->
+                    <template v-else>
+                        <div v-for="genre in genres" :key="genre.id" class="genre-pref-row">
+                            <label class="genre-pref-name">[[genre.name]]</label>
+                            <div class="genre-toggle-wrapper">
+                                <button type="button"
+                                    class="genre-toggle-btn"
+                                    :class="genreScores[genre.id] === 10 ? 'is-like-active' : ''"
+                                    @click="setGenreToggle(genre.id, 10)">&#128077; Like</button>
+                                <button type="button"
+                                    class="genre-toggle-btn"
+                                    :class="genreScores[genre.id] === 1 ? 'is-dislike-active' : ''"
+                                    @click="setGenreToggle(genre.id, 1)">&#128078; Dislike</button>
+                            </div>
+                        </div>
+                    </template>
                 </div>
+                <p class="help is-size-7 mt-3" v-if="profile.algorithm === 'algo2'">Select genres you like or dislike. Leave unselected if you have no preference.</p>
             </div>
         </div>
 
@@ -298,6 +319,38 @@
         margin-bottom: 2rem;
     }
 
+    .genre-toggle-wrapper {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .genre-toggle-btn {
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        border: 2px solid var(--border-soft);
+        background: var(--bg-elevated);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .genre-toggle-btn:hover {
+        border-color: var(--text-secondary);
+    }
+
+    .genre-toggle-btn.is-like-active {
+        background: #14532d;
+        border-color: #22c55e;
+        color: #bbf7d0;
+    }
+
+    .genre-toggle-btn.is-dislike-active {
+        background: #7f1d1d;
+        border-color: #ef4444;
+        color: #fecaca;
+    }
+
     .pref-item:last-child {
         margin-bottom: 0;
     }
@@ -403,10 +456,23 @@
     }
 
     /* Genres Grid */
+    .pref-item--genre {
+        margin-top: 1rem;
+    }
+
+    .pref-item--genre .pref-label {
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+    }
+
     .genre-preferences-list {
         display: grid;
         grid-template-columns: 1fr;
         gap: 0.5rem;
+        max-width: 900px;
+        margin: 0 auto;
     }
 
     @media (min-width: 1080px) {

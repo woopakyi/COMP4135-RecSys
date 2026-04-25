@@ -16,7 +16,7 @@ movies, genres, rates = loadData()
 
 # set the boolean from False to True if you have finished developing the corresponding algorithm.
 algo1_is_done = True #FM
-algo2_is_done = False #SASRec
+algo2_is_done = True #SASRec
 
 
 @bp.route('/', methods=('GET', 'POST'))
@@ -72,8 +72,6 @@ def index():
 
         if setup_complete:
             default_genres_movies = getMoviesByGenres(user_genres, selected_algorithm)[:12]
-            if len(default_genres_movies) == 0:
-                default_genres_movies = movies.head(12).to_dict('records')
 
             recommendations_movies, recommendations_message = getRecommendationBy(user_rates, selected_algorithm, user_genres)
             likes_similar_movies, likes_similar_message = getLikedSimilarBy(liked_movie_ids, selected_algorithm)
@@ -392,7 +390,7 @@ def getRecommendationBy(user_rates, selected_algorithm='1', user_genres=None):
         return algo1_module.getRecommendationBy(user_rates, movies, rates, user_genres=user_genres, genres_df=genres)
     if selected_algorithm == '2' and algo2_is_done:
         from . import algo2 as algo2_module
-        return algo2_module.getRecommendationBy(user_rates, movies, rates)
+        return algo2_module.getRecommendationBy(user_rates, movies, rates, user_genres=user_genres, genres_df=genres)
     return getRecommendationByDefault(user_rates)
 
 

@@ -45,28 +45,55 @@
                     </div>
 
                     <div class="setup-block mt-5">
-                        <p class="setup-label">Genre ratings:</p>
-                        <p class="help is-size-7 mb-4">Leave a genre at 0 if you do not want to rate it.</p>
-                        <div class="genre-list">
-                            {% for genre in genres %}
-                            <div class="genre-row">
-                                <div class="genre-name">{% if genre['name'] == '(no genres listed)' %}(no genres listed){% else %}{{ genre['name'] }}{% endif %}</div>
-                                <div class="genre-slider-wrapper">
-                                    <span class="slider-label">0</span>
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="10" 
-                                        v-model.number="genreScores['{{ genre['id'] }}']"
-                                        @change="saveGenrePreferences()"
-                                        class="line-slider"
-                                    />
-                                    <span class="slider-label">10</span>
-                                    <span class="slider-value">[[ genreScores['{{ genre['id'] }}'] || 0 ]]</span>
+                        <p class="setup-label" v-if="selectedAlgorithm !== '2'">Genre ratings:</p>
+                        <p class="setup-label" v-else>Genre preferences:</p>
+
+                        <!-- Algo 1: numeric sliders -->
+                        <template v-if="selectedAlgorithm !== '2'">
+                            <p class="help is-size-7 mb-4">Leave a genre at 0 if you do not want to rate it.</p>
+                            <div class="genre-list">
+                                {% for genre in genres %}
+                                <div class="genre-row">
+                                    <div class="genre-name">{% if genre['name'] == '(no genres listed)' %}(no genres listed){% else %}{{ genre['name'] }}{% endif %}</div>
+                                    <div class="genre-slider-wrapper">
+                                        <span class="slider-label">0</span>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="10"
+                                            v-model.number="genreScores['{{ genre['id'] }}']"
+                                            @change="saveGenrePreferences()"
+                                            class="line-slider"
+                                        />
+                                        <span class="slider-label">10</span>
+                                        <span class="slider-value">[[ genreScores['{{ genre['id'] }}'] || 0 ]]</span>
+                                    </div>
                                 </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div>
+                        </template>
+
+                        <!-- Algo 2: like / dislike toggles -->
+                        <template v-else>
+                            <p class="help is-size-7 mb-4">Select genres you like or dislike. Leave unselected if you have no preference.</p>
+                            <div class="genre-list">
+                                {% for genre in genres %}
+                                <div class="genre-row">
+                                    <div class="genre-name">{% if genre['name'] == '(no genres listed)' %}(no genres listed){% else %}{{ genre['name'] }}{% endif %}</div>
+                                    <div class="genre-toggle-wrapper">
+                                        <button type="button"
+                                            class="genre-toggle-btn"
+                                            :class="genreScores['{{ genre['id'] }}'] === 10 ? 'is-like-active' : ''"
+                                            @click="setGenreToggle('{{ genre['id'] }}', 10)">&#128077; Like</button>
+                                        <button type="button"
+                                            class="genre-toggle-btn"
+                                            :class="genreScores['{{ genre['id'] }}'] === 1 ? 'is-dislike-active' : ''"
+                                            @click="setGenreToggle('{{ genre['id'] }}', 1)">&#128078; Dislike</button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </template>
                     </div>
 
                     <div class="buttons is-centered mt-6 mb-0">
@@ -801,12 +828,34 @@
                 }
             }
 
+            function setGenreToggle(genreId, value) {
+                const key = String(genreId)
+                const current = genreScores.value[key]
+                const newScore = (current === value) ? 0 : value
+                // Spread into a new object so Vue's ref setter fires and
+                // guarantees a re-render (in-place mutation can be missed by
+                // in-DOM template compilation in Vue 3).
+                genreScores.value = { ...genreScores.value, [key]: newScore }
+                saveGenrePreferences()
+            }
+
             function selectAlgorithm(value) {
+                const prev = selectedAlgorithm.value
                 selectedAlgorithm.value = value
                 writeCookie('user_algorithm', value)
                 if (!isLoggedIn.value) {
                     saveAlgorithmToLocalStorage(value)
                 }
+
+                // Clear genre prefs when switching algorithms so algo1 slider
+                // scores don't bleed into algo2 like/dislike logic and vice versa.
+                if (prev !== value) {
+                    Object.keys(genreScores.value).forEach((key) => {
+                        genreScores.value[key] = 0
+                    })
+                    saveGenrePreferences()
+                }
+
                 if (isLoggedIn.value) {
                     fetch('/api/profile', {
                         method: 'PUT',
@@ -1010,6 +1059,7 @@
                 selectUi,
                 startExperience,
                 saveGenrePreferences,
+                setGenreToggle,
                 saveMovieRating,
                 clearMovieRating,
                 getMovieRating,
@@ -1284,6 +1334,40 @@
         color: var(--text-secondary);
         min-width: 2.2rem;
         text-align: right;
+    }
+
+    .genre-toggle-wrapper {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .genre-toggle-btn {
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        border: 2px solid var(--border-soft);
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+
+    .genre-toggle-btn:hover {
+        border-color: var(--text-secondary);
+        color: var(--text-primary);
+    }
+
+    .genre-toggle-btn.is-like-active {
+        background: #14532d;
+        border-color: #22c55e;
+        color: #bbf7d0;
+    }
+
+    .genre-toggle-btn.is-dislike-active {
+        background: #7f1d1d;
+        border-color: #ef4444;
+        color: #fecaca;
     }
 
     .node-bar {
