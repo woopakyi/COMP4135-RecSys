@@ -84,7 +84,10 @@
 
             <!-- Algorithm Selection -->
             <div class="pref-item">
-                <label class="pref-label">Algorithm:</label>
+                <div class="pref-label-row">
+                    <label class="pref-label">Algorithm:</label>
+                    <span class="inline-status success-inline" :class="{ 'is-visible': inlineStatus.saveAlgorithm }">Preferred Algorithm is saved!</span>
+                </div>
                 <div class="choice-grid setup-choice-grid">
                     <button type="button" class="choice-card" :class="{ 'is-active': profile.algorithm === 'algo1' }" @click="updatePreference('algorithm', 'algo1')">
                         <span class="choice-icon">🧠</span>
@@ -101,7 +104,10 @@
 
             <!-- UI Mode Selection -->
             <div class="pref-item">
-                <label class="pref-label">User Interface:</label>
+                <div class="pref-label-row">
+                    <label class="pref-label">User Interface:</label>
+                    <span class="inline-status success-inline" :class="{ 'is-visible': inlineStatus.saveUi }">Preferred UI is saved!</span>
+                </div>
                 <div class="choice-grid setup-choice-grid">
                     <button type="button" class="choice-card" :class="{ 'is-active': profile.uiMode === '1' }" @click="updatePreference('ui', '1')">
                         <span class="choice-icon">🌙</span>
@@ -118,8 +124,11 @@
 
             <!-- Genre Preferences -->
             <div class="pref-item pref-item--genre">
-                <label class="pref-label" v-if="profile.algorithm !== 'algo2'">Genre ratings:</label>
-                <label class="pref-label" v-else>Genre preferences:</label>
+                <div class="pref-label-row">
+                    <label class="pref-label" v-if="profile.algorithm !== 'algo2'">Genre ratings:</label>
+                    <label class="pref-label" v-else>Genre preferences:</label>
+                    <span class="inline-status success-inline" :class="{ 'is-visible': inlineStatus.saveGenre }">Preferred genre rating is saved!</span>
+                </div>
                 <div class="genre-preferences-list">
                     <!-- Algo 1 / default: sliders -->
                     <template v-if="profile.algorithm !== 'algo2'">
@@ -358,10 +367,26 @@
     .pref-label {
         display: block;
         font-weight: 700;
-        margin-bottom: 1.1rem;
+        margin-bottom: 0;
         color: var(--text-primary);
         font-size: 1.3rem;
         line-height: 1.2;
+    }
+
+    .pref-label-row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin-bottom: 1.1rem;
+        min-height: 1.5rem;
+    }
+
+    .pref-label-row .inline-status {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
     }
 
     .setup-choice-grid {
@@ -461,9 +486,6 @@
     }
 
     .pref-item--genre .pref-label {
-        max-width: 900px;
-        margin-left: auto;
-        margin-right: auto;
         display: block;
     }
 
@@ -471,14 +493,14 @@
         display: grid;
         grid-template-columns: 1fr;
         gap: 0.5rem;
-        max-width: 900px;
+        max-width: 1100px;
         margin: 0 auto;
     }
 
     @media (min-width: 1080px) {
         .genre-preferences-list {
             grid-template-columns: 1fr 1fr;
-            column-gap: 1.2rem;
+            column-gap: clamp(3rem, 8vw, 7rem);
         }
     }
 
@@ -828,7 +850,23 @@
 
         .pref-label {
             font-size: 1.15rem;
+            margin-bottom: 0;
+        }
+
+        .pref-label-row {
             margin-bottom: 0.95rem;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            min-height: 0;
+        }
+
+        .pref-label-row .inline-status {
+            font-size: 0.8rem;
+            position: static;
+            left: auto;
+            transform: none;
+            width: 100%;
+            text-align: center;
         }
 
         .section-header {

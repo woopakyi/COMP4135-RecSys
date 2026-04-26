@@ -6,6 +6,22 @@
     <section class="hero app-hero" v-if="!setupComplete">
         <div class="container is-fluid hero-container">
             <div class="hero-body px-0 py-6">
+                <div class="box intro-panel mt-0 mb-5">
+                    <div class="intro-header">
+                        <h2 class="title is-3 mb-2">Help Us Build a Better Movie Recommender!</h2>
+                    </div>
+                    <div class="intro-content">
+                        <p>This website is a COMP project exploring how to make movie recommendations smarter and more user-friendly. We are conducting a study to test new features. Your feedback helps us figure out what works best.</p>
+                        <p class="has-text-weight-semibold mb-2">Getting Started by:</p>
+                        <ol class="intro-steps">
+                            <li><strong>Tell Us What You Like:</strong> rate the movie genres below and pick a "Recommendation Style" (this is the algorithm we're testing).</li>
+                            <li><strong>Discover and Rate Movies:</strong> Once you click "Start," we'll show you movies picked just for you. Explore the lists, click on movies to see details, and rate any you've watched.</li>
+                            <li><strong>Give Us Your Opinion:</strong> After you've spent some time on the site, head over to the Feedback page. There, you can compare two different recommendation styles or two different page layouts and tell us which one you prefer.</li>
+                        </ol>
+                        <p class="mb-0">Every click and rating you provide helps us with our research. We sincerely appreciate your time and feedback. Let's find your next favorite movie together!</p>
+                    </div>
+                </div>
+
                 <div class="box setup-panel mt-0">
                     <div class="setup-header">
                         <h1 class="title is-2 mb-2">Movie Recommender</h1>
@@ -97,7 +113,7 @@
                     </div>
 
                     <div class="buttons is-centered mt-6 mb-0">
-                        <button class="button is-link is-light is-medium start-button" @click="startExperience">Save</button>
+                        <button class="button is-link is-light is-medium start-button" @click="startExperience">Start</button>
                     </div>
                 </div>
             </div>
@@ -1106,6 +1122,45 @@
         margin-right: auto;
     }
 
+    .intro-panel {
+        border-radius: 20px;
+        border: 1px solid var(--panel-border);
+        box-shadow: var(--panel-shadow);
+        background: var(--panel-bg);
+        max-width: 1180px;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 3rem !important;
+        padding: 1.75rem 2rem;
+    }
+
+    .intro-header {
+        text-align: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .intro-content {
+        color: var(--text-primary);
+        line-height: 1.65;
+    }
+
+    .intro-content p {
+        margin-bottom: 0.75rem;
+    }
+
+    .intro-steps {
+        margin: 0 0 0.85rem 1.2rem;
+    }
+
+    .intro-steps li {
+        margin-bottom: 0.45rem;
+    }
+
+    .app-body.ui-dark .intro-steps strong {
+        color: #e7efff;
+    }
+
     .setup-header {
         text-align: center;
         margin-bottom: 2rem;
@@ -1241,7 +1296,7 @@
     @media screen and (min-width: 1080px) {
         .genre-list {
             grid-template-columns: 1fr 1fr;
-            column-gap: 1.2rem;
+            column-gap: clamp(3rem, 8vw, 7rem);
         }
     }
 
@@ -1836,6 +1891,21 @@
         #app {
             padding-left: 0 !important;
             padding-right: 0 !important;
+        }
+
+        .intro-panel {
+            padding: 1.2rem 1rem;
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        .intro-content {
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+
+        .intro-steps {
+            margin-left: 1rem;
         }
 
         .app-hero {

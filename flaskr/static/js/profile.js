@@ -30,7 +30,10 @@ const app = createApp({
             inlineStatus: {
                 saveUsername: false,
                 resetPreferences: false,
-                clearAllRatings: false
+                clearAllRatings: false,
+                saveAlgorithm: false,
+                saveUi: false,
+                saveGenre: false
             }
         };
     },
@@ -303,6 +306,8 @@ const app = createApp({
         },
 
         async updatePreference(type, value) {
+            const statusKey = type === 'algorithm' ? 'saveAlgorithm' : 'saveUi';
+
             if (type === 'algorithm') {
                 this.profile.algorithm = value;
             } else if (type === 'ui') {
@@ -315,6 +320,7 @@ const app = createApp({
                 if (type === 'algorithm') {
                     SettingsStorage.setAlgorithm(value);
                 }
+                this.showInlineStatus(statusKey);
                 return;
             }
 
@@ -328,7 +334,7 @@ const app = createApp({
                 });
 
                 if (!response.ok) throw new Error('Failed to update preference');
-                this.showStatus('Preference updated', 'success');
+                this.showInlineStatus(statusKey);
             } catch (error) {
                 console.error('Error updating preference:', error);
                 this.showStatus('Error updating preference', 'error');
@@ -356,6 +362,7 @@ const app = createApp({
                 const allPrefs = GenreStorage.getPreferencesForAPI();
                 const scoreRecords = Object.keys(allPrefs).map(k => `${k}:${allPrefs[k]}`);
                 document.cookie = `user_genre_scores=${scoreRecords.join(',')}; path=/`;
+                this.showInlineStatus('saveGenre');
                 return;
             }
 
@@ -370,7 +377,7 @@ const app = createApp({
                 });
 
                 if (!response.ok) throw new Error('Failed to update genre preference');
-                this.showStatus('Genre rating updated', 'success');
+                this.showInlineStatus('saveGenre');
             } catch (error) {
                 console.error('Error updating genre preference:', error);
                 this.showStatus('Error updating genre rating', 'error');
