@@ -152,6 +152,7 @@
                     </template>
                     <!-- Algo 2: like / dislike toggles -->
                     <template v-else>
+                        <p class="help is-size-7 mb-3">Select genres you like or dislike. Leave unselected if you have no preference.</p>
                         <div v-for="genre in genres" :key="genre.id" class="genre-pref-row">
                             <label class="genre-pref-name">[[genre.name]]</label>
                             <div class="genre-toggle-wrapper">
@@ -167,7 +168,6 @@
                         </div>
                     </template>
                 </div>
-                <p class="help is-size-7 mt-3" v-if="profile.algorithm === 'algo2'">Select genres you like or dislike. Leave unselected if you have no preference.</p>
             </div>
         </div>
 
