@@ -544,6 +544,11 @@
         color: #00a63e !important;
     }
 
+    .app-body.ui-light .feedback-form {
+        border: 1px solid #cfd6df;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7), 0 10px 26px rgba(15, 23, 42, 0.04);
+    }
+
     .already-submitted-note {
         color: #22c55e !important;
         font-weight: 600;
@@ -622,15 +627,15 @@ const app = createApp({
             }
             if (this.feedbackType === 'ui_algo1') {
                 return {
-                    optionALabel: 'UI 1 (Dark Mode)',
-                    optionBLabel: 'UI 2 (Light Mode)',
+                    optionALabel: 'UI 1 (Professional Dark)',
+                    optionBLabel: 'UI 2 (Concise White)',
                     context: 'User Interface Evaluation based on Algorithm 1'
                 };
             }
             if (this.feedbackType === 'ui_algo2') {
                 return {
-                    optionALabel: 'UI 1 (Dark Mode)',
-                    optionBLabel: 'UI 2 (Light Mode)',
+                    optionALabel: 'UI 1 (Professional Dark)',
+                    optionBLabel: 'UI 2 (Concise White)',
                     context: 'User Interface Evaluation based on Algorithm 2'
                 };
             }

@@ -25,8 +25,8 @@ const app = createApp({
             return this.feedbackType?.startsWith('ui_');
         },
         getUiContext() {
-            if (this.feedbackType === 'algo_ui1') return 'UI 1 (Dark Mode)';
-            if (this.feedbackType === 'algo_ui2') return 'UI 2 (Light Mode)';
+            if (this.feedbackType === 'algo_ui1') return 'UI 1 (Professional Dark)';
+            if (this.feedbackType === 'algo_ui2') return 'UI 2 (Concise White)';
             return '';
         },
         getAlgorithmContext() {
@@ -112,8 +112,8 @@ const app = createApp({
 
         formatFeedbackType(type) {
             const types = {
-                'algo_ui1': 'Algorithm Evaluation (UI 1 - Dark Mode)',
-                'algo_ui2': 'Algorithm Evaluation (UI 2 - Light Mode)',
+                'algo_ui1': 'Algorithm Evaluation (UI 1 - Professional Dark)',
+                'algo_ui2': 'Algorithm Evaluation (UI 2 - Concise White)',
                 'ui_algo1': 'UI Evaluation (Algorithm 1)',
                 'ui_algo2': 'UI Evaluation (Algorithm 2)'
             };

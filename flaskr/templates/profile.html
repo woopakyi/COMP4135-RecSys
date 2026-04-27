@@ -112,12 +112,12 @@
                     <button type="button" class="choice-card" :class="{ 'is-active': profile.uiMode === '1' }" @click="updatePreference('ui', '1')">
                         <span class="choice-icon">🌙</span>
                         <span class="choice-title">UI 1</span>
-                        <span class="choice-desc">Dark mode</span>
+                        <span class="choice-desc">Professional Dark</span>
                     </button>
                     <button type="button" class="choice-card" :class="{ 'is-active': profile.uiMode === '2' }" @click="updatePreference('ui', '2')">
                         <span class="choice-icon">☀️</span>
                         <span class="choice-title">UI 2</span>
-                        <span class="choice-desc">Light mode</span>
+                        <span class="choice-desc">Concise White</span>
                     </button>
                 </div>
             </div>
@@ -498,6 +498,10 @@
         margin: 0 auto;
     }
 
+    .genre-preferences-list > .help {
+        grid-column: 1 / -1;
+    }
+
     @media (min-width: 1080px) {
         .genre-preferences-list {
             grid-template-columns: 1fr 1fr;
@@ -613,6 +617,14 @@
     .app-body.ui-light .inline-status.success-inline,
     .app-body.ui-light .status-message.success {
         color: #166534;
+    }
+
+    .app-body.ui-light .profile-header,
+    .app-body.ui-light .preferences-section,
+    .app-body.ui-light .ratings-section,
+    .app-body.ui-light .feedback-progress-section {
+        border: 1px solid #cfd6df;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7), 0 10px 26px rgba(15, 23, 42, 0.04);
     }
 
     .button-with-status {

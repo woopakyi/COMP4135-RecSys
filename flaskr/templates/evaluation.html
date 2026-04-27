@@ -88,8 +88,10 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Full Name</th>
+                            <th>User Id</th>
                             <th>Contact Email</th>
+                            <th>Full Name</th>
+                            <th>Register Email</th>
                             <th>Type</th>
                             <th>Source</th>
                             <th>Option A</th>
@@ -103,8 +105,10 @@
                     <tbody>
                         <tr v-for="row in paginatedVotes" :key="row.id">
                             <td>[[ row.id ]]</td>
-                            <td>[[ row.full_name || 'NULL' ]]</td>
+                            <td>[[ row.user_id || 'NULL' ]]</td>
                             <td>[[ row.contact_email || 'NULL' ]]</td>
+                            <td>[[ row.full_name || 'NULL' ]]</td>
+                            <td>[[ row.registered_email || 'NULL' ]]</td>
                             <td>[[ renderFeedbackType(row.feedback_type) ]]</td>
                             <td>[[ row.submission_type ]]</td>
                             <td>[[ row.option_a_label ]]</td>
@@ -115,7 +119,7 @@
                             <td>[[ row.feedback_text || 'NULL' ]]</td>
                         </tr>
                         <tr v-if="votes.length === 0">
-                            <td colspan="11" class="has-text-centered has-text-grey py-6">No feedback records found for the current filter.</td>
+                            <td colspan="13" class="has-text-centered has-text-grey py-6">No feedback records found for the current filter.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -133,6 +137,59 @@
                 <button
                     @click="currentVotesPage = Math.min(totalVotesPages, currentVotesPage + 1)"
                     :disabled="currentVotesPage === totalVotesPages"
+                    class="pagination-btn"
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+
+        <div class="box mt-5 eval-filters" v-if="isAdmin">
+            <div class="table-top">
+                <h3 class="title is-5 mb-1">Feedback Submission Status</h3>
+                <p class="is-size-7 has-text-grey">Only logged-in admin users can view this table. Shows the User id, full name, contact email, Register Email and true false of Submitted feedback.</p>
+            </div>
+
+            <div class="table-wrap">
+                <table class="table is-fullwidth eval-table submission-status-table">
+                    <thead>
+                        <tr>
+                            <th>User Id</th>
+                            <th>Full Name</th>
+                            <th>Contact Email</th>
+                            <th>Register Email</th>
+                            <th>Submitted Feedback</th>
+                            <th>Logged When Submitting</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in paginatedSubmissionStatus" :key="row.user_id">
+                            <td>[[ row.user_id ]]</td>
+                            <td>[[ row.full_name || 'NULL' ]]</td>
+                            <td>[[ row.contact_email || 'NULL' ]]</td>
+                            <td>[[ row.registered_email || 'NULL' ]]</td>
+                            <td :style="{ color: row.submitted_feedback ? '#15803d' : '#dc2626', fontWeight: '700' }">[[ row.submitted_feedback ? 'true' : 'false' ]]</td>
+                            <td :style="{ color: (row.full_name && row.contact_email) ? '#15803d' : '#dc2626', fontWeight: '700' }">[[ (row.full_name && row.contact_email) ? 'true' : 'false' ]]</td>
+                        </tr>
+                        <tr v-if="submissionStatus.length === 0">
+                            <td colspan="6" class="has-text-centered has-text-grey py-6">No users found.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" v-if="totalSubmissionPages > 1">
+                <button
+                    @click="currentSubmissionPage = Math.max(1, currentSubmissionPage - 1)"
+                    :disabled="currentSubmissionPage === 1"
+                    class="pagination-btn"
+                >
+                    Previous
+                </button>
+                <span class="pagination-info">Page [[ currentSubmissionPage ]] of [[ totalSubmissionPages ]]</span>
+                <button
+                    @click="currentSubmissionPage = Math.min(totalSubmissionPages, currentSubmissionPage + 1)"
+                    :disabled="currentSubmissionPage === totalSubmissionPages"
                     class="pagination-btn"
                 >
                     Next
@@ -384,7 +441,7 @@
 
     .eval-table th:nth-child(2),
     .eval-table td:nth-child(2) {
-        min-width: 180px;
+        min-width: 96px;
     }
 
     .eval-table th:nth-child(3),
@@ -392,13 +449,49 @@
         min-width: 240px;
     }
 
-    .eval-table th:nth-child(10),
-    .eval-table td:nth-child(10) {
+    .eval-table th:nth-child(4),
+    .eval-table td:nth-child(4) {
+        min-width: 180px;
+    }
+
+    .eval-table th:nth-child(5),
+    .eval-table td:nth-child(5) {
+        min-width: 240px;
+    }
+
+    .submission-status-table th,
+    .submission-status-table td {
+        min-width: 150px;
+    }
+
+    .submission-status-table th:nth-child(1),
+    .submission-status-table td:nth-child(1) {
+        min-width: 96px;
+    }
+
+    .status-true {
+        color: #15803d;
+        font-weight: 700;
+    }
+
+    .status-false {
+        color: #dc2626;
+        font-weight: 700;
+    }
+
+    .app-body.ui-light .chart-source-filter,
+    .app-body.ui-light .eval-filters {
+        border: 1px solid #cfd6df;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7), 0 10px 26px rgba(15, 23, 42, 0.04);
+    }
+
+    .eval-table th:nth-child(12),
+    .eval-table td:nth-child(12) {
         min-width: 190px;
     }
 
-    .eval-table th:nth-child(11),
-    .eval-table td:nth-child(11) {
+    .eval-table th:nth-child(13),
+    .eval-table td:nth-child(13) {
         min-width: 520px;
     }
 
@@ -421,8 +514,8 @@
             gap: 0.45rem;
         }
 
-        .eval-table th:nth-child(11),
-        .eval-table td:nth-child(11) {
+        .eval-table th:nth-child(13),
+        .eval-table td:nth-child(13) {
             min-width: 320px;
         }
     }
@@ -440,8 +533,11 @@ const evalApp = createApp({
             tableType: 'all',
             summary: {},
             votes: [],
+            submissionStatus: [],
             currentVotesPage: 1,
             votesPerPage: 10,
+            currentSubmissionPage: 1,
+            submissionPerPage: 10,
             isAdmin: !!document.querySelector('meta[name="eval-admin"]')
         };
     },
@@ -453,6 +549,14 @@ const evalApp = createApp({
         },
         totalVotesPages() {
             return Math.max(1, Math.ceil(this.votes.length / this.votesPerPage));
+        },
+        paginatedSubmissionStatus() {
+            const start = (this.currentSubmissionPage - 1) * this.submissionPerPage;
+            const end = start + this.submissionPerPage;
+            return this.submissionStatus.slice(start, end);
+        },
+        totalSubmissionPages() {
+            return Math.max(1, Math.ceil(this.submissionStatus.length / this.submissionPerPage));
         },
         cards() {
             const defs = [
@@ -500,6 +604,7 @@ const evalApp = createApp({
         this.loadSummary();
         if (this.isAdmin) {
             this.loadVotes();
+            this.loadSubmissionStatus();
         }
     },
     methods: {
@@ -528,6 +633,17 @@ const evalApp = createApp({
             const data = await res.json();
             this.votes = data.votes || [];
             this.currentVotesPage = 1;
+        },
+        async loadSubmissionStatus() {
+            const res = await fetch('/api/evaluation/submission-status');
+            if (!res.ok) {
+                this.submissionStatus = [];
+                this.currentSubmissionPage = 1;
+                return;
+            }
+            const data = await res.json();
+            this.submissionStatus = data.submission_status || [];
+            this.currentSubmissionPage = 1;
         },
         setSourceFilter(value) {
             this.sourceFilter = value;

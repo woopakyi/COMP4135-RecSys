@@ -11,14 +11,16 @@
                         <h2 class="title is-3 mb-2">Help Us Build a Better Movie Recommender!</h2>
                     </div>
                     <div class="intro-content">
-                        <p>This website is a COMP project exploring how to make movie recommendations smarter and more user-friendly. We are conducting a study to test new features. Your feedback helps us figure out what works best.</p>
+                        <p>This website is a COMP project exploring how to make movie recommendations smarter and more user-friendly. We are conducting a study to test algorithms and user interfaces.</p>
                         <p class="has-text-weight-semibold mb-2">Getting Started by:</p>
                         <ol class="intro-steps">
-                            <li><strong>Tell Us What You Like:</strong> rate the movie genres below and pick a "Recommendation Style" (this is the algorithm we're testing).</li>
-                            <li><strong>Discover and Rate Movies:</strong> Once you click "Start," we'll show you movies picked just for you. Explore the lists, click on movies to see details, and rate any you've watched.</li>
-                            <li><strong>Give Us Your Opinion:</strong> After you've spent some time on the site, head over to the Feedback page. There, you can compare two different recommendation styles or two different page layouts and tell us which one you prefer.</li>
+                            <li><strong>Login:</strong> register is not necessary but we recommend you to do so</li>
+                            <li><strong>Provide preferences:</strong> choose an algorithm and user interface you like, then rate the movie genres below</li>
+                            <li><strong>Start movie rating:</strong> click the "Start" button to explore and rate movies</li>
+                            <li><strong>Switch Algo and UI:</strong> After you've spent some time on this website, switch to another algorithm and user interface for further experience</li>
+                            <li><strong>Provide feedback:</strong> After trying all algorithm and user interface, visit the feedback page page to provide your opinion</li>
                         </ol>
-                        <p class="mb-0">Every click and rating you provide helps us with our research. We sincerely appreciate your time and feedback. Let's find your next favorite movie together!</p>
+                        <p class="mb-0">Every click and rating you provide helps us with our research. We sincerely appreciate your time and feedback.</p>
                     </div>
                 </div>
 
@@ -50,12 +52,12 @@
                             <button type="button" class="choice-card" :class="selectedUi === '1' ? 'is-active' : ''" @click="selectUi('1')">
                                 <span class="choice-icon">🌙</span>
                                 <span class="choice-title">UI 1</span>
-                                <span class="choice-desc">Dark mode</span>
+                                <span class="choice-desc">Professional Dark</span>
                             </button>
                             <button type="button" class="choice-card" :class="selectedUi === '2' ? 'is-active' : ''" @click="selectUi('2')">
                                 <span class="choice-icon">☀️</span>
                                 <span class="choice-title">UI 2</span>
-                                <span class="choice-desc">Light mode</span>
+                                <span class="choice-desc">Concise White</span>
                             </button>
                         </div>
                     </div>
@@ -1150,7 +1152,7 @@
     }
 
     .intro-steps {
-        margin: 0 0 0.85rem 1.2rem;
+        margin: 0 0 0.85rem 2.5rem;
     }
 
     .intro-steps li {
