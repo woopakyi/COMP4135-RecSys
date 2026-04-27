@@ -611,6 +611,7 @@ def evaluation_votes():
             'votes': [{
                 'id': row.id,
                 'user_id': row.user_id,
+                'registered_email': row.user.email if row.user else None,
                 'full_name': row.full_name,
                 'contact_email': row.contact_email,
                 'submission_type': 'participant' if row.submission_type == 'logged' else row.submission_type,
@@ -625,6 +626,36 @@ def evaluation_votes():
         })
     except Exception:
         return jsonify({'votes': []}), 200
+
+
+@api_bp.route('/evaluation/submission-status', methods=['GET'])
+def evaluation_submission_status():
+    """Return per-user feedback submission status for admin table."""
+    try:
+        if not g.user or not getattr(g.user, 'admin', False):
+            return jsonify({'error': 'Admin access required'}), 403
+
+        submitted_user_ids = {
+            row[0]
+            for row in db.session.query(Feedback.user_id)
+            .filter(Feedback.user_id.isnot(None))
+            .distinct()
+            .all()
+            if row[0] is not None
+        }
+
+        users = User.query.order_by(User.id.desc()).all()
+        return jsonify({
+            'submission_status': [{
+                'user_id': user.id,
+                'full_name': user.participant_full_name,
+                'contact_email': user.participant_contact_email,
+                'registered_email': user.email,
+                'submitted_feedback': user.id in submitted_user_ids,
+            } for user in users]
+        })
+    except Exception:
+        return jsonify({'submission_status': []}), 200
 
 
 @api_bp.route('/feedback/<int:feedback_id>', methods=['PUT'])
