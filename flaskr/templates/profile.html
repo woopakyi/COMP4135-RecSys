@@ -132,6 +132,7 @@
                 <div class="genre-preferences-list">
                     <!-- Algo 1 / default: sliders -->
                     <template v-if="profile.algorithm !== 'algo2'">
+                        <p class="help is-size-7 mb-3">Leave a genre at 0 if you do not want to rate it.</p>
                         <div v-for="genre in genres" :key="genre.id" class="genre-pref-row">
                             <label class="genre-pref-name">[[genre.name]]</label>
                             <div class="genre-pref-slider">
