@@ -4,6 +4,8 @@ A Flask-based movie recommender web application built for COMP4135. It compares 
 
 **Group Members:** Chow Tsz Hin (23228660), Woo Pak Yi (23229578), Cheung Yui Haang (21223270)
 
+**Live Demo:** https://comp4135-recsys.up.railway.app
+
 ---
 
 ## Project Overview
