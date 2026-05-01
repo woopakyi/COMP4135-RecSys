@@ -535,10 +535,14 @@ const app = createApp({
     },
 
     mounted() {
-        this.loadGenres();
-        this.loadUserProfile();
-        this.loadRatings();
-        this.loadFeedbackProgress();
+        Promise.all([
+            this.loadGenres(),
+            this.loadUserProfile(),
+            this.loadRatings(),
+            this.loadFeedbackProgress()
+        ]).finally(() => {
+            document.getElementById('profile-app')?.removeAttribute('data-bootstrap-loading');
+        });
     }
 });
 

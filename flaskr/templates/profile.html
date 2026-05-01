@@ -4,7 +4,7 @@
 
 {% block content %}
 <main>
-    <div id="profile-app" class="profile-container" v-cloak
+    <div id="profile-app" class="profile-container" v-cloak data-bootstrap-loading="true"
          data-logged-in="{{ 'true' if g.user else 'false' }}"
          data-initial-username="{{ g.user.username if g.user else '' }}"
          data-has-google-linked="{{ 'true' if g.user and g.user.google_sub else 'false' }}">
@@ -250,6 +250,10 @@
         display: flex;
         flex-direction: column;
         gap: 2rem;
+    }
+
+    .profile-container[data-bootstrap-loading="true"] {
+        visibility: hidden;
     }
 
     .profile-header {
