@@ -1,6 +1,14 @@
 Demo_materials/
 flaskr/Algo1RecTest.txt
 flaskr/Algo2RecTest.txt
+test_db_connection.py
+
+# Local runtime secrets and databases
+instance/
+
+# Local Python environments and editor settings
+.conda/
+.vscode/
 
 # Python bytecode/cache
 __pycache__/
