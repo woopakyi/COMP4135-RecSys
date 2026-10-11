@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app, g
 from flaskr.models import db, User, Rating, Feedback
 from sqlalchemy.exc import IntegrityError
 import secrets
@@ -27,6 +27,17 @@ def _is_simple_email(email):
         return False
     local_part, separator, domain_part = email.partition('@')
     return bool(separator and local_part and domain_part and '@' not in domain_part)
+
+
+def _sign_in_user(user, local_storage_action=None):
+    """Start a user session and optionally tell the browser how to handle guest localStorage."""
+    session.clear()
+    session['user_id'] = user.id
+    session['username'] = user.username
+    session['algorithm'] = user.algorithm_preference
+    session['ui_variant'] = user.ui_preference
+    if local_storage_action in {'migrate', 'clear'}:
+        session['local_storage_action'] = local_storage_action
 
 
 def _merge_user_accounts(primary_user, secondary_user):
@@ -120,8 +131,9 @@ def register():
             db.session.add(user)
             db.session.commit()
             
-            flash(f'Welcome {username}! You can now log in.', 'success')
-            return redirect(url_for('auth.login'))
+            _sign_in_user(user, local_storage_action='migrate')
+            flash(f'Welcome {username}! Your guest exercise records will be saved to your account.', 'success')
+            return redirect(url_for('main.index'))
             
         except IntegrityError:
             db.session.rollback()
@@ -150,12 +162,8 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if user and user.check_password(password):
-            # Set session
-            session.clear()
-            session['user_id'] = user.id
-            session['username'] = user.username
-            session['algorithm'] = user.algorithm_preference
-            session['ui_variant'] = user.ui_preference
+            # Existing-account login should not import guest exercise records.
+            _sign_in_user(user, local_storage_action='clear')
 
             return redirect(url_for('main.index'))
         else:
@@ -299,11 +307,7 @@ def google_callback():
                 flash('Switch failed due to account conflict. Please use another Google account.', 'error')
                 return redirect(url_for('main.profile'))
 
-            session.clear()
-            session['user_id'] = primary_user.id
-            session['username'] = primary_user.username
-            session['algorithm'] = primary_user.algorithm_preference
-            session['ui_variant'] = primary_user.ui_preference
+            _sign_in_user(primary_user)
 
             flash('Account switched to Google Sign-in successfully.', 'success')
             return redirect(url_for('main.profile'))
@@ -314,6 +318,7 @@ def google_callback():
         if not user:
             user = User.query.filter_by(email=email).first()
 
+        is_new_user = False
         if not user:
             base_username = username
             suffix = 1
@@ -329,6 +334,7 @@ def google_callback():
             user.set_password(secrets.token_urlsafe(32))
             db.session.add(user)
             db.session.commit()
+            is_new_user = True
         else:
             user.google_sub = google_sub or user.google_sub
             try:
@@ -338,11 +344,7 @@ def google_callback():
                 flash('Google account link conflict detected. Please sign in with Google and retry linking.', 'error')
                 return redirect(url_for('auth.login'))
 
-        session.clear()
-        session['user_id'] = user.id
-        session['username'] = user.username
-        session['algorithm'] = user.algorithm_preference
-        session['ui_variant'] = user.ui_preference
+        _sign_in_user(user, local_storage_action='migrate' if is_new_user else 'clear')
 
         return redirect(url_for('main.index'))
     except Exception:
@@ -364,8 +366,8 @@ def logout():
 @bp.before_app_request
 def load_logged_in_user():
     """Load user info into g for use in templates"""
-    from flask import g
-    
+    g.local_storage_action = session.pop('local_storage_action', None)
+
     user_id = session.get('user_id')
     
     if user_id is None:

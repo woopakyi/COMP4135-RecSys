@@ -178,12 +178,32 @@
 <script>
     (function () {
         try {
+            const localStorageAction = {{ (g.local_storage_action or '')|tojson }};
+            if (!['migrate', 'clear'].includes(localStorageAction)) {
+                return;
+            }
+
+            const clearGuestExerciseState = function () {
+                localStorage.removeItem('rec_user_ratings');
+                localStorage.removeItem('rec_genre_prefs');
+                localStorage.removeItem('rec_algorithm');
+                localStorage.removeItem('rec_ui_mode');
+                localStorage.removeItem('rec_selected_genres');
+                localStorage.removeItem('feedback_participant_submitted_types');
+                localStorage.removeItem('feedback_participant_record_ids');
+                localStorage.removeItem('feedback_participant_profile');
+                localStorage.removeItem('rec_setup_saved');
+                document.cookie = 'user_rates=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+                document.cookie = 'user_genre_scores=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            };
+
             const rawRatings = localStorage.getItem('rec_user_ratings');
             const rawGenres = localStorage.getItem('rec_genre_prefs');
             const algorithm = localStorage.getItem('rec_algorithm');
             const uiMode = localStorage.getItem('rec_ui_mode');
             const rawFeedbackProgress = localStorage.getItem('feedback_participant_submitted_types');
             const rawFeedbackRecordIds = localStorage.getItem('feedback_participant_record_ids');
+            const rawFeedbackProfile = localStorage.getItem('feedback_participant_profile');
             const rawSetupSaved = localStorage.getItem('rec_setup_saved');
 
             const hasRatings = !!rawRatings && rawRatings !== '{}';
@@ -191,9 +211,15 @@
             const hasPrefs = !!algorithm || !!uiMode;
             const hasFeedbackProgress = !!rawFeedbackProgress && rawFeedbackProgress !== '[]';
             const hasFeedbackRecords = !!rawFeedbackRecordIds && rawFeedbackRecordIds !== '[]';
+            const hasFeedbackProfile = !!rawFeedbackProfile && rawFeedbackProfile !== '{}';
             const hasSetupSaved = rawSetupSaved === '1' || rawSetupSaved === 'true';
 
-            if (!hasRatings && !hasGenres && !hasPrefs && !hasFeedbackProgress && !hasFeedbackRecords && !hasSetupSaved) {
+            if (!hasRatings && !hasGenres && !hasPrefs && !hasFeedbackProgress && !hasFeedbackRecords && !hasFeedbackProfile && !hasSetupSaved) {
+                return;
+            }
+
+            if (localStorageAction === 'clear') {
+                clearGuestExerciseState();
                 return;
             }
 
@@ -258,18 +284,12 @@
                     return;
                 }
                 // Guest local state has been moved to user account.
-                localStorage.removeItem('rec_user_ratings');
-                localStorage.removeItem('rec_genre_prefs');
-                localStorage.removeItem('rec_algorithm');
-                localStorage.removeItem('rec_ui_mode');
-                localStorage.removeItem('rec_selected_genres');
-                localStorage.removeItem('feedback_participant_submitted_types');
-                localStorage.removeItem('feedback_participant_record_ids');
-                localStorage.removeItem('rec_setup_saved');
-                document.cookie = 'user_rates=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-                document.cookie = 'user_genre_scores=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+                clearGuestExerciseState();
             }).catch(() => {
                 // Ignore migration errors to avoid interrupting page use.
+            }).finally(() => {
+                // After any login/register flow, remove local guest records from this browser.
+                clearGuestExerciseState();
             });
         } catch (_err) {
             // Ignore migration errors to avoid interrupting page use.
